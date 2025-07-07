@@ -1,5 +1,6 @@
-use nalgebra::{DMatrix, DVector};
+use nalgebra::{DMatrix, DVector, SVector};
 use rand::random;
+use std::fs;
 
 #[derive(Debug)]
 struct NN {
@@ -29,6 +30,14 @@ impl NN {
             biases: biases,
         })
     }
+
+    fn forward_pass (network: &NN) -> Vec<DVector<f32>> {
+        let mut new_layers: Vec<DVector<f32>> = vec![ network.layers[0].clone() ];
+        for layer in 0..network.weights.len() {
+            new_layers.push(&network.weights[layer]*&network.layers[layer+1] + &network.biases[layer]);
+        }
+        new_layers
+    }
 }
 
 fn main() {
@@ -36,4 +45,5 @@ fn main() {
         Ok(network) => network,
         Err(e) => { print!("{e:?}"); panic!("noooo") },
     };
+    network.layers = NN::forward_pass(&network);
 }
