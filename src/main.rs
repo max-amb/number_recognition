@@ -1,5 +1,6 @@
 use nalgebra::{DMatrix, DVector};
 use rand::random;
+use std::cmp::max;
 use std::io::{BufReader, Read};
 use std::fs::File;
 use image::GrayImage;
@@ -36,9 +37,27 @@ impl NN {
     fn forward_pass (network: &NN) -> Vec<DVector<f32>> {
         let mut new_layers: Vec<DVector<f32>> = vec![ network.layers[0].clone() ];
         for layer in 0..network.weights.len() {
-            new_layers.push(&network.weights[layer]*&network.layers[layer] + &network.biases[layer]);
+            new_layers.push((&network.weights[layer]*&network.layers[layer] + &network.biases[layer]).map(|x| NN::relu(x)));
         }
         new_layers
+    }
+
+    fn backpropagation (network: NN, expected_result: DVector<f32>, input: DVector<f32>) {}
+
+    fn relu (input: f32) -> f32 {
+        if input.lt(&0.0) {
+            0.0
+        } else {
+            input
+        }
+    }
+
+    fn relu_derivative (input: f32) -> f32 {
+        if input.lt(&0.0) {
+            0.0
+        } else {
+            1.0
+        }
     }
 }
 
@@ -49,7 +68,7 @@ fn main() {
     };
     network.layers = NN::forward_pass(&network);
 
-    let _ = Training::new("/home/max/Downloads/train-labels.idx1-ubyte", "/home/max/Downloads/train-images.idx3-ubyte");
+    let training_data = Training::new("/home/max/Downloads/train-labels.idx1-ubyte", "/home/max/Downloads/train-images.idx3-ubyte");
 }
 
 struct Training{
