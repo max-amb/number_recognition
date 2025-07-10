@@ -60,15 +60,6 @@ impl NN {
                     delta= 2.0*current_costs[row.0]*NN::leaky_relu_derivative(z_value);
                 }
                 delta_biases[row.0] = delta;
-                /*
-                for col in row.1.iter().enumerate() {
-                    let input_neuron_value: f32 = network.layers[layer][col.0];
-                    let weight_delta: f32 = delta*input_neuron_value;
-                    new_weights[(row.0, col.0)] = weight_delta;
-
-                    next_layer_costs[col.0] += delta*network.weights[layer][(row.0, col.0)];
-                }*/
-
             }
             current_costs = (&network.weights[layer].transpose())*&delta_biases;
             delta_weights_list.push(&delta_biases*(&network.layers[layer].transpose())); 
