@@ -1,5 +1,7 @@
-# Tests
+# Number recognition!
 
+## Tests
+This is effectively a walkthough of how I got my testing data, it could be used as a way to help understand the process of learning in a neural network as well!
 ## Initial conditions
 We start with a network with 3 layers (one input, one hidden and one output).
 They have sizes: 3, 2, and 3.
