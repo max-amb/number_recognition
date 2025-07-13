@@ -26,7 +26,6 @@ impl NN {
                 normal_dist.sample(&mut rng) }
             )) 
             .collect();
-
         let biases: Vec<DVector<f32>> = (1..number_of_layers)
             .map(|x| DVector::from_fn(layer_sizes[x as usize] as usize, |_, _| rng.random_range(-1.0..=1.0)))
             .collect();
@@ -88,7 +87,7 @@ impl NN {
 
     fn leaky_relu (input: f32) -> f32 {
         if input.lt(&0.0) {
-            0.01*input
+            0.2*input
         } else {
             input
         }
@@ -96,7 +95,7 @@ impl NN {
 
     fn leaky_relu_derivative (input: f32) -> f32 {
         if input.lt(&0.0) {
-            0.01
+            0.2
         } else {
             1.0
         }
