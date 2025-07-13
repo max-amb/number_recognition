@@ -1,5 +1,6 @@
 use nalgebra::{DMatrix, DVector};
 use rand::Rng;
+use rand_distr::{Distribution, Normal};
 
 #[derive(Debug)]
 pub struct NN {
@@ -20,8 +21,12 @@ impl NN {
             .map(|x| DVector::from_element(layer_sizes[x as usize] as usize, 0.0))
             .collect();
         let weights: Vec<DMatrix<f32>> = (1..number_of_layers)
-            .map(|x| DMatrix::from_fn(layer_sizes[x as usize] as usize, layer_sizes[(x-1) as usize] as usize, |_, _| rng.random_range(-1.0..=1.0)))
+            .map(|x| DMatrix::from_fn(layer_sizes[x as usize] as usize, layer_sizes[(x-1) as usize] as usize, |_, _| {
+                let normal_dist = Normal::new(0.0, 2.0/(layer_sizes[(x-1) as usize] as f32)).unwrap();
+                normal_dist.sample(&mut rng) }
+            )) 
             .collect();
+
         let biases: Vec<DVector<f32>> = (1..number_of_layers)
             .map(|x| DVector::from_fn(layer_sizes[x as usize] as usize, |_, _| rng.random_range(-1.0..=1.0)))
             .collect();
@@ -83,7 +88,7 @@ impl NN {
 
     fn leaky_relu (input: f32) -> f32 {
         if input.lt(&0.0) {
-            0.2*input
+            0.01*input
         } else {
             input
         }
@@ -91,9 +96,17 @@ impl NN {
 
     fn leaky_relu_derivative (input: f32) -> f32 {
         if input.lt(&0.0) {
-            0.2
+            0.01
         } else {
             1.0
         }
+    }
+
+    pub fn network_classification (layer: &DVector<f32>) -> usize {
+        let mut network_classification: (usize, f32) = (usize::MIN, f32::MIN);
+        for i in layer.iter().enumerate() {
+            if network_classification.1 < *i.1 { network_classification.1 = *i.1; network_classification.0 = i.0 }; 
+        };
+        network_classification.0
     }
 }

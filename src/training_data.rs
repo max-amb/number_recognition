@@ -82,5 +82,110 @@ impl TrainingData {
         }
         Ok(labels)
     }
+
+    fn crc32_for_png (data: &[u8]) -> bool {
+        // TODO!!
+        true
+    }
+
+    pub fn generate_training_data_from_bmp (image_path: &str) -> Result<DVector<f32>, std::io::Error> {
+        dbg!(image_path);
+        let f = File::open(image_path)?;
+        let mut reader = BufReader::with_capacity(256, f);
+
+        // For header
+        let mut buffer = [0; 14];
+        reader.read_exact(&mut buffer).unwrap();
+        assert_eq!([66 as u8, 77 as u8], buffer[0..2]); // BM
+        let size_of_file: u32 = buffer[2..6].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum(); // FROM MSB
+        let pixel_array_offset: u32 = buffer[10..14].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum(); 
+
+        // DIB header
+        let mut buffer = [0; 124];
+        reader.read_exact(&mut buffer).unwrap();
+        assert_eq!([124 as u8, 0 as u8, 0 as u8, 0 as u8], buffer[0..4]); // GIMP!! (v5)
+        // see http://www.jose.it-berater.org/gdi/bitmaps/bitmapv5header.htm
+
+        assert_eq!([28 as u8, 0 as u8, 0 as u8, 0 as u8], buffer[4..8]); // Width 28
+        assert_eq!([28 as u8, 0 as u8, 0 as u8, 0 as u8], buffer[8..12]); // Length 28
+        assert_eq!([1 as u8, 0 as u8], buffer[12..14]); // Planes (must be one)
+        assert_eq!(8 as u32, buffer[14..16].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum()); // Bit count (bit width)
+        assert_eq!([0 as u8, 0 as u8, 0 as u8, 0 as u8], buffer[16..20]); // Uncompressed
+        
+        let size_of_image: u32 = buffer[20..24].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum(); 
+        // [24..32] is scaling, not required
+        let colours_used: u32 = buffer[32..36].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum();
+        let colours_needed: u32 = buffer[36..40].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum();
+        // [40..52] is not valid as no compression
+        assert_eq!([0 as u8, 0 as u8, 0 as u8, 0 as u8], buffer[52..56]); // No alpha mask
+
+        // Ignore rest of DIB
+        
+        // Pixel array
+        let mut buffer = [0; 28*28]; // Width * Height with bit depth 8
+        reader.read_exact(&mut buffer).unwrap();
+        Ok(DVector::from_iterator(28*28, buffer.iter().map(|x| (*x as f32)/255.0)))
+    }
+
+    fn generate_training_data_from_png (image_path: &str) -> Result<TrainingData, std::io::Error> {
+        // https://en.wikipedia.org/wiki/PNG
+        let f = File::open(image_path)?;
+        let mut reader = BufReader::with_capacity(128, f);
+        let mut buffer = [0; 8];
+
+        // Header
+        reader.read(&mut buffer).unwrap();
+        assert_eq!([137 as u8,80 as u8,78 as u8,71 as u8,13 as u8,10 as u8,26 as u8,10 as u8], buffer); // Assert that the image is a PNG
+
+        // IHDR chunk
+        let mut buffer = [0; 4];
+        reader.read_exact(&mut buffer).unwrap();
+        assert_eq!([0 as u8, 0 as u8, 0 as u8, 13 as u8], buffer); // Assert the next chunk (IHDR)
+        // has length 13
+
+        let mut buffer = [0; 4];
+        reader.read_exact(&mut buffer).unwrap();
+        assert_eq!([73 as u8, 72 as u8, 68 as u8, 82 as u8], buffer); // Assert the chunks name is
+        // IHDR
+
+        let mut buffer = [0; 17];
+        reader.read_exact(&mut buffer).unwrap();
+        assert_eq!([0 as u8, 0 as u8, 0 as u8, 28 as u8], buffer[0..4]); // Width of 28 
+        assert_eq!([0 as u8, 0 as u8, 0 as u8, 28 as u8], buffer[4..8]); // Length of 28 
+        let bit_depth = buffer[8..9][0]; // Bits per pixel
+        assert_eq!([0 as u8], buffer[9..10]); // Assert greyscale
+        assert_eq!([0 as u8], buffer[10..11]); // Compression 
+        assert_eq!([0 as u8], buffer[11..12]); // Filtering
+        assert_eq!([0 as u8], buffer[12..13]); // Interlacing
+        if !TrainingData::crc32_for_png(&buffer) { panic!() }; // Check for checksum
+
+        let mut buffer = [0; 4];
+        reader.read_exact(&mut buffer).unwrap();
+        let length_of_data: u32 = buffer.iter().rev().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum();
+
+        reader.read_exact(&mut buffer).unwrap();
+        assert_eq!([73 as u8, 68 as u8, 65 as u8, 84 as u8], buffer); // Check it is the IDAT data
+
+        // see https://datatracker.ietf.org/doc/html/rfc1950#section-2
+
+        let mut buffer = [0; 1];
+        reader.read_exact(&mut buffer).unwrap();
+        assert_eq!([120 as u8], buffer); // Assert CMF is 0x78 - 7 for 32K window size and 8 for
+        // compression type deflate
+
+        reader.read_exact(&mut buffer).unwrap();
+        assert!((120*256+(buffer[0] as u32)) % 31 == 0);  // Check digits (FCHECK)
+        assert!(buffer[0] & 8 == 0); // Assert no dictionary (FDICT)
+        // We can safely ignore the rest of the byte as FLEVEL isn't needed for decomp
+     
+
+
+        // Calculating the amount of data to be read
+
+        Ok (TrainingData {
+            data: TrainingData::read_images("").unwrap(),
+            labels: TrainingData::read_labels("").unwrap(),
+        })
+    }
 }
 
