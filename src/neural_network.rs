@@ -1,6 +1,10 @@
 use nalgebra::{DMatrix, DVector};
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
+use std::fs::OpenOptions;
+use std::io::{BufRead, BufReader, Write};
+
+const ALPHA: f32 = 0.01;
 
 #[derive(PartialEq)]
 pub enum InitialisationOptions {
@@ -140,7 +144,7 @@ impl NN {
 
     fn leaky_relu (input: f32) -> f32 {
         if input.lt(&0.0) {
-            0.01*input
+            ALPHA*input
         } else {
             input
         }
@@ -148,7 +152,7 @@ impl NN {
 
     fn leaky_relu_derivative (input: f32) -> f32 {
         if input.lt(&0.0) {
-            0.01
+            ALPHA 
         } else {
             1.0
         }
@@ -160,5 +164,97 @@ impl NN {
             if network_classification.1 < *i.1 { network_classification.1 = *i.1; network_classification.0 = i.0 }; 
         };
         network_classification.0
+    }
+
+    pub fn output_model_to_file (network: &NN, path: &str) -> std::io::Result<()> {
+        let mut f = OpenOptions::new()
+            .write(true)
+            .read(false)
+            .create_new(true)
+            .open(path)?;
+
+        let mut output: String = String::from("[layers]\n");
+        output.push_str(&network.layers.iter().fold(String::from("["), |s, x| format!("{s}{}, ", x.len())));
+        output.replace_range(output.len()-2..output.len(), "]\n");
+
+        output.push_str("\n[weights]");
+        for weight in network.weights.iter().enumerate() {
+            output.push_str(&format!("\n["));
+            for individual_number in weight.1 {
+                output.push_str(&format!("{}, ", individual_number));
+            }
+            output.replace_range(output.len()-2..output.len(), "]");
+        }
+
+        output.push_str("\n\n[biases]");
+        for biase in network.biases.iter().enumerate() {
+            output.push_str(&format!("\n["));
+            for individual_number in biase.1 {
+                output.push_str(&format!("{}, ", individual_number));
+            }
+            output.replace_range(output.len()-2..output.len(), "]");
+        }
+
+        write!(f, "{}\n", output)
+    }
+
+    pub fn generate_model_from_file (path: &str) -> Result<NN, std::io::Error> {
+        let f = OpenOptions::new()
+            .read(true)
+            .open(path)?;
+        let mut reader = BufReader::new(f);
+        let mut line = String::new();
+
+        // Layers
+        reader.read_line(&mut line)?;
+        assert_eq!(&line, "[layers]\n");
+        line.clear();
+        reader.read_line(&mut line)?;
+        line = line.strip_prefix("[").unwrap().to_string();
+        line = line.strip_suffix("]\n").unwrap().to_string();
+        let layer_sizes: Vec<usize> = line.split(", ").map(|x| x.parse::<usize>().unwrap()).collect();
+        line.clear();
+
+        let layers: Vec<DVector<f32>> = (0..layer_sizes.len())
+            .map(|x| DVector::from_element(layer_sizes[x as usize] as usize, 0.0))
+            .collect();
+
+        // Weights
+        let mut weights: Vec<DMatrix<f32>> = Vec::new();
+        reader.read_line(&mut line)?;
+        assert_eq!(&line, "\n");
+        reader.read_line(&mut line)?;
+        assert_eq!(&line, "\n[weights]\n");
+        line.clear();
+
+        for i in 0..layer_sizes.len()-1 {
+            reader.read_line(&mut line)?;
+            line = line.strip_prefix("[").unwrap().to_string();
+            line = line.strip_suffix("]\n").unwrap().to_string();
+            weights.push(DMatrix::from_iterator(layer_sizes[i+1], layer_sizes[i], line.split(", ").map(|x| x.parse::<f32>().unwrap())));
+            line.clear();
+        }
+
+        // Biases
+        let mut biases: Vec<DVector<f32>> = Vec::new();
+        reader.read_line(&mut line)?;
+        assert_eq!(&line, "\n");
+        reader.read_line(&mut line)?;
+        assert_eq!(&line, "\n[biases]\n");
+        line.clear();
+
+        for i in 0..layer_sizes.len()-1 {
+            reader.read_line(&mut line)?;
+            line = line.strip_prefix("[").unwrap().to_string();
+            line = line.strip_suffix("]\n").unwrap().to_string();
+            biases.push(DVector::from_iterator(layer_sizes[i+1], line.split(", ").map(|x| x.parse::<f32>().unwrap())));
+            line.clear();
+        }
+
+        Ok(NN {
+            layers,
+            weights,
+            biases
+        })
     }
 }
