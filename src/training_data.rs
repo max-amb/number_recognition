@@ -84,7 +84,6 @@ impl TrainingData {
     }
 
     pub fn generate_training_data_from_bmp (image_path: &str) -> Result<DVector<f32>, std::io::Error> {
-        dbg!(image_path);
         let f = File::open(image_path)?;
         let mut reader = BufReader::with_capacity(256, f);
 
@@ -94,7 +93,6 @@ impl TrainingData {
         assert_eq!([66 as u8, 77 as u8], buffer[0..2]); // BM
         let _size_of_file: u32 = buffer[2..6].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum(); // FROM MSB
         let _pixel_array_offset: u64 = buffer[10..14].iter().enumerate().map(|(i, x)| (*x as u64)*(256_u64.pow(i as u32))).sum(); 
-        dbg!(_pixel_array_offset);
 
         // DIB header
         let mut buffer = [0; 124];

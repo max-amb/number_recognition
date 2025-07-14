@@ -13,7 +13,9 @@ const CYCLE_SIZE: usize = 1000;
 
 fn main() {
     let mut network = NN::generate_model_from_file("/home/max/Documents/model.txt").unwrap();
+}
 
+fn input_bmps (network: &mut NN) {
     let mut buffer = String::new();
     io::stdin().read_line(&mut buffer).unwrap();
     while buffer != "STOP" {
@@ -23,7 +25,7 @@ fn main() {
             print!("{:^3}|", i.1*255.0);
         }
         network.layers = NN::forward_pass(&network, &image);
-        dbg!(NN::network_classification(&network.layers[network.layers.len()-1]));
+        println!("{}", NN::network_classification(&network.layers[network.layers.len()-1]));
 
         let mut buffer = String::new();
         io::stdin().read_line(&mut buffer).unwrap();
