@@ -2,7 +2,7 @@ use nalgebra::{DMatrix, DVector};
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NN {
     pub layers: Vec<DVector<f32>>,
     pub weights: Vec<DMatrix<f32>>,
@@ -73,8 +73,37 @@ impl NN {
         (delta_biases_list.into_iter().rev().collect(), delta_weights_list.into_iter().rev().collect())
     }
 
-    pub fn calculate_cost (network: &NN, expected_result: &DVector<f32>) -> DVector<f32> {
-        &network.layers[network.layers.len()-1] - expected_result
+    pub fn backpropagation_for_parallelisation (network: &NN, costs: DVector<f32>, new_layers: &Vec<DVector<f32>>) -> (Vec<DVector<f32>>, Vec<DMatrix<f32>>) {
+        let mut delta_weights_list: Vec<DMatrix<f32>> = Vec::new(); 
+        let mut delta_biases_list: Vec<DVector<f32>> = Vec::new(); 
+
+        let mut current_costs = costs.clone();
+
+        for layer in (0..network.weights.len()).rev() { // Layers
+            let mut delta_biases: DVector<f32> = DVector::from_element(current_costs.nrows(), 0.0);
+
+            for row in network.weights[layer].row_iter().enumerate() { // Through the output nodes
+                let z_value = new_layers[layer+1][row.0];
+
+                let delta;
+                if layer == network.weights.len()-1 {
+                    delta= 2.0*current_costs[row.0]*NN::sigmoid_derivative(z_value);
+                } else {
+                    delta= 2.0*current_costs[row.0]*NN::leaky_relu_derivative(z_value);
+                }
+                delta_biases[row.0] = delta;
+            }
+            current_costs = (&network.weights[layer].transpose())*&delta_biases;
+            delta_weights_list.push(&delta_biases*(new_layers[layer].transpose())); 
+            delta_biases_list.push(delta_biases);
+        }
+
+        (delta_biases_list.into_iter().rev().collect(), delta_weights_list.into_iter().rev().collect())
+    }
+
+
+    pub fn calculate_cost (layers: &Vec<DVector<f32>>, expected_result: &DVector<f32>) -> DVector<f32> {
+        &layers[layers.len()-1] - expected_result
     }
 
     fn sigmoid (input: f32) -> f32 {
@@ -87,7 +116,7 @@ impl NN {
 
     fn leaky_relu (input: f32) -> f32 {
         if input.lt(&0.0) {
-            0.2*input
+            0.01*input
         } else {
             input
         }
@@ -95,7 +124,7 @@ impl NN {
 
     fn leaky_relu_derivative (input: f32) -> f32 {
         if input.lt(&0.0) {
-            0.2
+            0.01
         } else {
             1.0
         }
