@@ -12,18 +12,22 @@ pub mod training_data;
 const CYCLE_SIZE: usize = 1000;
 
 fn main() {
-    let network = train();
+    let mut network = NN::generate_model_from_file("/home/max/Documents/model.txt").unwrap();
 
-    /*
     let mut buffer = String::new();
     io::stdin().read_line(&mut buffer).unwrap();
     while buffer != "STOP" {
-        network.layers = NN::forward_pass(&network, &TrainingData::generate_training_data_from_bmp(&buffer.trim()).unwrap());
+        let image = TrainingData::generate_training_data_from_bmp(&buffer.trim()).unwrap();
+        for i in image.iter().enumerate() {
+            if i.0 % 28 == 0 { println!("") };
+            print!("{:^3}|", i.1*255.0);
+        }
+        network.layers = NN::forward_pass(&network, &image);
         dbg!(NN::network_classification(&network.layers[network.layers.len()-1]));
 
+        let mut buffer = String::new();
         io::stdin().read_line(&mut buffer).unwrap();
-    } */
-    run_on_testing_data(&network);
+    }
 }
 
 fn train () -> NN { 
