@@ -2,6 +2,18 @@ use nalgebra::{DMatrix, DVector};
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
 
+#[derive(PartialEq)]
+pub enum InitialisationOptions {
+    Random,
+    He,
+}
+
+impl Default for InitialisationOptions {
+    fn default() -> Self {
+        InitialisationOptions::He
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct NN {
     pub layers: Vec<DVector<f32>>,
@@ -10,7 +22,7 @@ pub struct NN {
 }
 
 impl NN {
-    pub fn new (number_of_layers: i32, layer_sizes: &[i32]) -> Result<NN, &'static str> {
+    pub fn new (number_of_layers: i32, layer_sizes: &[i32], initialisation: InitialisationOptions) -> Result<NN, &'static str> {
         if layer_sizes.len() != number_of_layers as usize {
             return Err("The array of layer sizes has a different number of elements than the number of layers");
         } 
@@ -20,15 +32,27 @@ impl NN {
         let layers: Vec<DVector<f32>> = (0..number_of_layers)
             .map(|x| DVector::from_element(layer_sizes[x as usize] as usize, 0.0))
             .collect();
-        let weights: Vec<DMatrix<f32>> = (1..number_of_layers)
-            .map(|x| DMatrix::from_fn(layer_sizes[x as usize] as usize, layer_sizes[(x-1) as usize] as usize, |_, _| {
-                let normal_dist = Normal::new(0.0, 2.0/(layer_sizes[(x-1) as usize] as f32)).unwrap();
-                normal_dist.sample(&mut rng) }
-            )) 
-            .collect();
+
+        let weights: Vec<DMatrix<f32>> = match initialisation {
+            InitialisationOptions::Random => {
+                (1..number_of_layers)
+                    .map(|x| DMatrix::from_fn(layer_sizes[x as usize] as usize, layer_sizes[(x-1) as usize] as usize, |_, _| rng.random_range(-1.0..=1.0)))
+                    .collect()
+            },
+            _ => {
+                (1..number_of_layers)
+                .map(|x| DMatrix::from_fn(layer_sizes[x as usize] as usize, layer_sizes[(x-1) as usize] as usize, |_, _| {
+                    let normal_dist = Normal::new(0.0, 2.0/(layer_sizes[(x-1) as usize] as f32)).unwrap();
+                    normal_dist.sample(&mut rng) }
+                )) 
+                .collect()
+            },
+        };
+
         let biases: Vec<DVector<f32>> = (1..number_of_layers)
             .map(|x| DVector::from_fn(layer_sizes[x as usize] as usize, |_, _| rng.random_range(-1.0..=1.0)))
             .collect();
+
         return Ok(Self {
             layers,
             weights,
