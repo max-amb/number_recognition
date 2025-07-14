@@ -1,5 +1,5 @@
 use nalgebra::DVector;
-use std::io::{BufReader, Read};
+use std::io::{SeekFrom, Seek, BufReader, Read};
 use std::fs::File;
 use image::GrayImage;
 
@@ -93,7 +93,8 @@ impl TrainingData {
         reader.read_exact(&mut buffer).unwrap();
         assert_eq!([66 as u8, 77 as u8], buffer[0..2]); // BM
         let _size_of_file: u32 = buffer[2..6].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum(); // FROM MSB
-        let _pixel_array_offset: u32 = buffer[10..14].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum(); 
+        let _pixel_array_offset: u64 = buffer[10..14].iter().enumerate().map(|(i, x)| (*x as u64)*(256_u64.pow(i as u32))).sum(); 
+        dbg!(_pixel_array_offset);
 
         // DIB header
         let mut buffer = [0; 124];
@@ -117,9 +118,15 @@ impl TrainingData {
         // Ignore rest of DIB
         
         // Pixel array
+        reader.seek(SeekFrom::Start(_pixel_array_offset))?;
         let mut buffer = [0; 28*28]; // Width * Height with bit depth 8
         reader.read_exact(&mut buffer).unwrap();
-        Ok(DVector::from_iterator(28*28, buffer.iter().map(|x| (*x as f32)/255.0)))
+        let x: Vec<f32> = buffer.iter().map(|x| (*x as f32)/255.0).collect();
+        let mut new: Vec<f32> = Vec::new();
+        for i in x.iter().enumerate() {
+            new.insert(i.0%28, *i.1);
+        }
+        Ok(DVector::from_vec(new))
     }
 
     #[allow(dead_code)]
