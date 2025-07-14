@@ -101,6 +101,7 @@ fn train () -> NN {
     network
 }
 
+#[allow(dead_code)]
 fn run_on_testing_data (network: &mut NN) {
     let testing_data = TrainingData::new("/home/max/Downloads/t10k-labels.idx1-ubyte", "/home/max/Downloads/t10k-images.idx3-ubyte");
     let mut correct: usize = 0;

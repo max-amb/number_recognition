@@ -83,11 +83,6 @@ impl TrainingData {
         Ok(labels)
     }
 
-    fn crc32_for_png (data: &[u8]) -> bool {
-        // TODO!!
-        true
-    }
-
     pub fn generate_training_data_from_bmp (image_path: &str) -> Result<DVector<f32>, std::io::Error> {
         dbg!(image_path);
         let f = File::open(image_path)?;
@@ -97,8 +92,8 @@ impl TrainingData {
         let mut buffer = [0; 14];
         reader.read_exact(&mut buffer).unwrap();
         assert_eq!([66 as u8, 77 as u8], buffer[0..2]); // BM
-        let size_of_file: u32 = buffer[2..6].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum(); // FROM MSB
-        let pixel_array_offset: u32 = buffer[10..14].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum(); 
+        let _size_of_file: u32 = buffer[2..6].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum(); // FROM MSB
+        let _pixel_array_offset: u32 = buffer[10..14].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum(); 
 
         // DIB header
         let mut buffer = [0; 124];
@@ -112,10 +107,10 @@ impl TrainingData {
         assert_eq!(8 as u32, buffer[14..16].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum()); // Bit count (bit width)
         assert_eq!([0 as u8, 0 as u8, 0 as u8, 0 as u8], buffer[16..20]); // Uncompressed
         
-        let size_of_image: u32 = buffer[20..24].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum(); 
+        let _size_of_image: u32 = buffer[20..24].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum(); 
         // [24..32] is scaling, not required
-        let colours_used: u32 = buffer[32..36].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum();
-        let colours_needed: u32 = buffer[36..40].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum();
+        let _colours_used: u32 = buffer[32..36].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum();
+        let _colours_needed: u32 = buffer[36..40].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum();
         // [40..52] is not valid as no compression
         assert_eq!([0 as u8, 0 as u8, 0 as u8, 0 as u8], buffer[52..56]); // No alpha mask
 
@@ -127,6 +122,13 @@ impl TrainingData {
         Ok(DVector::from_iterator(28*28, buffer.iter().map(|x| (*x as f32)/255.0)))
     }
 
+    #[allow(dead_code)]
+    fn crc32_for_png (_data: &[u8]) -> bool {
+        // TODO!!
+        true
+    }
+
+    #[allow(dead_code)]
     fn generate_training_data_from_png (image_path: &str) -> Result<TrainingData, std::io::Error> {
         // https://en.wikipedia.org/wiki/PNG
         let f = File::open(image_path)?;
@@ -152,7 +154,7 @@ impl TrainingData {
         reader.read_exact(&mut buffer).unwrap();
         assert_eq!([0 as u8, 0 as u8, 0 as u8, 28 as u8], buffer[0..4]); // Width of 28 
         assert_eq!([0 as u8, 0 as u8, 0 as u8, 28 as u8], buffer[4..8]); // Length of 28 
-        let bit_depth = buffer[8..9][0]; // Bits per pixel
+        let _bit_depth = buffer[8..9][0]; // Bits per pixel
         assert_eq!([0 as u8], buffer[9..10]); // Assert greyscale
         assert_eq!([0 as u8], buffer[10..11]); // Compression 
         assert_eq!([0 as u8], buffer[11..12]); // Filtering
@@ -161,7 +163,7 @@ impl TrainingData {
 
         let mut buffer = [0; 4];
         reader.read_exact(&mut buffer).unwrap();
-        let length_of_data: u32 = buffer.iter().rev().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum();
+        let _length_of_data: u32 = buffer.iter().rev().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum();
 
         reader.read_exact(&mut buffer).unwrap();
         assert_eq!([73 as u8, 68 as u8, 65 as u8, 84 as u8], buffer); // Check it is the IDAT data
