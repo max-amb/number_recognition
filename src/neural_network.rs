@@ -4,8 +4,6 @@ use rand_distr::{Distribution, Normal};
 use std::fs::OpenOptions;
 use std::io::{BufRead, BufReader, Write};
 
-const ALPHA: f32 = 0.01;
-
 #[derive(PartialEq)]
 pub enum InitialisationOptions {
     Random,
@@ -23,10 +21,11 @@ pub struct NN {
     pub layers: Vec<DVector<f32>>,
     pub weights: Vec<DMatrix<f32>>,
     pub biases: Vec<DVector<f32>>,
+    pub alpha: f32,
 }
 
 impl NN {
-    pub fn new (number_of_layers: i32, layer_sizes: &[i32], initialisation: InitialisationOptions) -> Result<NN, &'static str> {
+    pub fn new (number_of_layers: i32, layer_sizes: &[i32], initialisation: InitialisationOptions, alpha_value: Option<f32>) -> Result<NN, &'static str> {
         if layer_sizes.len() != number_of_layers as usize {
             return Err("The array of layer sizes has a different number of elements than the number of layers");
         } 
@@ -41,33 +40,33 @@ impl NN {
             InitialisationOptions::Random => {
                 (1..number_of_layers)
                     .map(|x| DMatrix::from_fn(layer_sizes[x as usize] as usize, layer_sizes[(x-1) as usize] as usize, |_, _| rng.random_range(-1.0..=1.0)))
-                    .collect()
-            },
-            _ => {
+                    .collect()},
+            InitialisationOptions::He => {
                 (1..number_of_layers)
                 .map(|x| DMatrix::from_fn(layer_sizes[x as usize] as usize, layer_sizes[(x-1) as usize] as usize, |_, _| {
                     let normal_dist = Normal::new(0.0, 2.0/(layer_sizes[(x-1) as usize] as f32)).unwrap();
                     normal_dist.sample(&mut rng) }
                 )) 
-                .collect()
-            },
+                .collect() },
         };
 
         let biases: Vec<DVector<f32>> = (1..number_of_layers)
             .map(|x| DVector::from_fn(layer_sizes[x as usize] as usize, |_, _| rng.random_range(-1.0..=1.0)))
             .collect();
 
+        let alpha = match alpha_value { Some(val) => val, _ => 0.01};
         return Ok(Self {
             layers,
             weights,
             biases,
+            alpha,
         })
     }
 
     pub fn forward_pass (network: &NN, input: &DVector<f32>) -> Vec<DVector<f32>> {
         let mut new_layers: Vec<DVector<f32>> = vec![ input.clone() ];
         for layer in 0..network.weights.len()-1 {
-            new_layers.push((&network.weights[layer]*&new_layers[layer] + &network.biases[layer]).map(|x| NN::leaky_relu(x)));
+            new_layers.push((&network.weights[layer]*&new_layers[layer] + &network.biases[layer]).map(|x| NN::leaky_relu(x, network.alpha)));
         }
         new_layers.push((&network.weights[network.weights.len()-1]*&new_layers[network.weights.len()-1] + &network.biases[network.weights.len()-1]).map(|x| NN::sigmoid(x)));
         new_layers
@@ -89,7 +88,7 @@ impl NN {
                 if layer == network.weights.len()-1 {
                     delta= 2.0*current_costs[row.0]*NN::sigmoid_derivative(z_value);
                 } else {
-                    delta= 2.0*current_costs[row.0]*NN::leaky_relu_derivative(z_value);
+                    delta= 2.0*current_costs[row.0]*NN::leaky_relu_derivative(z_value, network.alpha);
                 }
                 delta_biases[row.0] = delta;
             }
@@ -117,7 +116,7 @@ impl NN {
                 if layer == network.weights.len()-1 {
                     delta= 2.0*current_costs[row.0]*NN::sigmoid_derivative(z_value);
                 } else {
-                    delta= 2.0*current_costs[row.0]*NN::leaky_relu_derivative(z_value);
+                    delta= 2.0*current_costs[row.0]*NN::leaky_relu_derivative(z_value, network.alpha);
                 }
                 delta_biases[row.0] = delta;
             }
@@ -142,17 +141,17 @@ impl NN {
         NN::sigmoid(input)* (1.0-NN::sigmoid(input))
     }
 
-    fn leaky_relu (input: f32) -> f32 {
+    fn leaky_relu (input: f32, alpha: f32) -> f32 {
         if input.lt(&0.0) {
-            ALPHA*input
+            alpha*input
         } else {
             input
         }
     }
 
-    fn leaky_relu_derivative (input: f32) -> f32 {
+    fn leaky_relu_derivative (input: f32, alpha: f32) -> f32 {
         if input.lt(&0.0) {
-            ALPHA 
+            alpha
         } else {
             1.0
         }
@@ -195,7 +194,10 @@ impl NN {
             output.replace_range(output.len()-2..output.len(), "]");
         }
 
-        write!(f, "{}\n", output)
+        output.push_str("\n\n[alpha]");
+        output.push_str(&format!("{}\n", network.alpha));
+
+        write!(f, "{}", output)
     }
 
     pub fn generate_model_from_file (path: &str) -> Result<NN, std::io::Error> {
@@ -223,8 +225,9 @@ impl NN {
         let mut weights: Vec<DMatrix<f32>> = Vec::new();
         reader.read_line(&mut line)?;
         assert_eq!(&line, "\n");
+        line.clear();
         reader.read_line(&mut line)?;
-        assert_eq!(&line, "\n[weights]\n");
+        assert_eq!(&line, "[weights]\n");
         line.clear();
 
         for i in 0..layer_sizes.len()-1 {
@@ -239,8 +242,9 @@ impl NN {
         let mut biases: Vec<DVector<f32>> = Vec::new();
         reader.read_line(&mut line)?;
         assert_eq!(&line, "\n");
+        line.clear();
         reader.read_line(&mut line)?;
-        assert_eq!(&line, "\n[biases]\n");
+        assert_eq!(&line, "[biases]\n");
         line.clear();
 
         for i in 0..layer_sizes.len()-1 {
@@ -251,10 +255,22 @@ impl NN {
             line.clear();
         }
 
+        // Alpha
+        reader.read_line(&mut line)?;
+        assert_eq!(&line, "\n");
+        line.clear();
+        reader.read_line(&mut line)?;
+        assert_eq!(&line, "[alpha]\n");
+        line.clear();
+        reader.read_line(&mut line)?;
+        let alpha: f32 = line.parse().unwrap();
+
+
         Ok(NN {
             layers,
             weights,
-            biases
+            biases,
+            alpha
         })
     }
 }
