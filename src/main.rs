@@ -1,4 +1,3 @@
-use nalgebra::{DMatrix, DVector};
 use training_data::TrainingData;
 use crate::neural_network::{NN, InitialisationOptions};
 use std::io;
@@ -13,7 +12,7 @@ fn main() {
         Ok(network) => network,
         Err(e) => { print!("{e:?}"); panic!("noooo") },
     };
-    network = NN::train(network, 5000, data_for_training);
+    network = NN::training(network, 5000, data_for_training, 0.99);
     NN::output_model_to_file(&network, "/home/max/number_recognition/models/x.txt").unwrap();
 }
 
