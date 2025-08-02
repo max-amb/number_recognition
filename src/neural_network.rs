@@ -1,6 +1,5 @@
 use nalgebra::{DMatrix, DVector};
-use rand::Rng;
-use rand_distr::{Distribution, Normal};
+use rand::Rng; use rand_distr::{Distribution, Normal};
 use std::fs::OpenOptions;
 use std::io::{BufRead, BufReader, Write};
 use std::sync::{mpsc, Arc};
@@ -15,10 +14,23 @@ pub enum InitialisationOptions {
     #[default] He,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum CostFunction {
     Quadratic,
-    CrossEntropy,
+    CategoricalCrossEntropy,
+}
+
+impl CostFunction {
+    pub fn calculate_cost (&self, observed: &DVector<f32>, expected: &DVector<f32>) -> f32 {
+        match self {
+            CostFunction::Quadratic => {
+                observed.iter().enumerate().map(|(i, x)| (x-expected[i]).powi(2)).sum::<f32>()
+            },
+            CostFunction::CategoricalCrossEntropy => {
+                -expected.iter().enumerate().map(|(i, x)| x*((f32::EPSILON+observed[i]).ln())).sum::<f32>()
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -49,7 +61,7 @@ impl NN {
             InitialisationOptions::He => {
                 (1..number_of_layers)
                 .map(|x| DMatrix::from_fn(layer_sizes[x as usize] as usize, layer_sizes[(x-1) as usize] as usize, |_, _| {
-                    let normal_dist = Normal::new(0.0, 2.0/(layer_sizes[(x-1) as usize] as f32)).unwrap();
+                    let normal_dist = Normal::new(0.0, (2.0_f32/(layer_sizes[(x-1) as usize] as f32)).sqrt()).unwrap();
                     normal_dist.sample(&mut rng) }
                 )) 
                 .collect() },
@@ -71,23 +83,23 @@ impl NN {
     pub fn forward_pass (network: &NN, input: &DVector<f32>, cost_function: &CostFunction) -> Vec<DVector<f32>> {
         let mut new_layers: Vec<DVector<f32>> = vec![ input.clone() ];
         for layer in 0..network.weights.len()-1 {
-            new_layers.push((&network.weights[layer]*&new_layers[layer] + &network.biases[layer]).map(|x| NN::leaky_relu(x, network.alpha)));
+            new_layers.push((&network.weights[layer]*&new_layers[layer] + &network.biases[layer]).map(|x| NN::relu(x, network.alpha)));
         }
         new_layers.push(match cost_function {
             CostFunction::Quadratic => (&network.weights[network.weights.len()-1]*&new_layers[network.weights.len()-1] + &network.biases[network.weights.len()-1]).map(NN::sigmoid),
-            CostFunction::CrossEntropy => (&network.weights[network.weights.len()-1]*&new_layers[network.weights.len()-1] + &network.biases[network.weights.len()-1]).map(|x| NN::softmax(x, &new_layers[network.weights.len()-1])),
+            CostFunction::CategoricalCrossEntropy => {
+                NN::softmax(&network.weights[network.weights.len()-1]*&new_layers[network.weights.len()-1] + &network.biases[network.weights.len()-1])
+            },
         });
         new_layers
     }
 
-    pub fn backprop (network: &NN, costs: &DVector<f32>, new_layers: &[DVector<f32>], cost_function: &CostFunction) -> (Vec<DVector<f32>>, Vec<DMatrix<f32>>) {
+    pub fn backprop (network: &NN, expected_result: &DVector<f32>, new_layers: &[DVector<f32>], cost_function: &CostFunction) -> (Vec<DVector<f32>>, Vec<DMatrix<f32>>) {
         let mut delta_weights_list: Vec<DMatrix<f32>> = Vec::new(); 
         let mut delta_biases_list: Vec<DVector<f32>> = Vec::new(); 
 
-        let mut current_costs = costs.clone();
-
         for layer in (0..network.weights.len()).rev() { // Layers
-            let mut delta_biases: DVector<f32> = DVector::from_element(current_costs.nrows(), 0.0);
+            let mut delta_biases: DVector<f32> = DVector::from_element(network.layers[layer+1].nrows(), 0.0);
             let non_activation_applied_layer = &network.weights[layer]*&new_layers[layer]+&network.biases[layer];
 
             for row in network.weights[layer].row_iter().enumerate() { // Through the output nodes
@@ -95,26 +107,24 @@ impl NN {
 
                 let delta: f32 = match cost_function {
                     CostFunction::Quadratic => {
+                        /*
                         if layer == network.weights.len()-1 {
                             2.0*current_costs[row.0]*(activation_applied_value)*(1.0-activation_applied_value)
                         } else {
                             2.0*current_costs[row.0]*NN::leaky_relu_derivative(non_activation_applied_layer[row.0], network.alpha)
-                        }
+                        } */ todo!();
                     },
-                    CostFunction::CrossEntropy => {
+                    CostFunction::CategoricalCrossEntropy => {
                         if layer == network.weights.len()-1 {
-                            -current_costs[row.0]
+                            let expected_value = expected_result[row.0];
+                            activation_applied_value - expected_value
                         } else {
-        current_costs[row.0] * NN::leaky_relu_derivative(
-            non_activation_applied_layer[row.0], 
-            network.alpha
-        )
+                            delta_biases_list.last().unwrap().iter().sum::<f32>()*network.weights[layer].row(row.0).iter().sum::<f32>()*NN::relu_derivative(non_activation_applied_layer[row.0], network.alpha)
                         }
                     }, 
                 };
                 delta_biases[row.0] = delta;
             }
-            current_costs = (&network.weights[layer].transpose())*&delta_biases;
             delta_weights_list.push(&delta_biases*(new_layers[layer].transpose())); 
             delta_biases_list.push(delta_biases);
         }
@@ -131,9 +141,10 @@ impl NN {
         1.0/(1.0+(-input).exp())
     }
 
-    fn softmax(input: f32, layer: &DVector<f32>) -> f32 {
-        assert!(!layer.iter().any(|x| x == &0.0));
-        input.exp()/layer.iter().map(|x| x.exp()).sum::<f32>()
+    fn softmax(layer: DVector<f32>) -> DVector<f32> {
+        let layers_max = layer.max();
+        let exponentials = DVector::from_iterator(layer.nrows(), layer.iter().map(|x| (x-layers_max).exp()));
+        &exponentials/exponentials.sum()
     }
     
     fn leaky_relu (input: f32, alpha: f32) -> f32 {
@@ -152,6 +163,22 @@ impl NN {
         }
     }
 
+    fn relu (input: f32, alpha: f32) -> f32 {
+        if input.lt(&0.0) {
+            0.0
+        } else {
+            input
+        }
+    }
+
+    fn relu_derivative (input: f32, alpha: f32) -> f32 {
+        if input.lt(&0.0) {
+            0.0
+        } else {
+            1.0
+        }
+    }
+ 
     pub fn network_classification (layer: &DVector<f32>) -> usize {
         let mut network_classification: (usize, f32) = (usize::MIN, f32::MIN);
         for i in layer.iter().enumerate() {
@@ -276,23 +303,26 @@ impl NN {
         training_data: TrainingData,
         precision: f32,
         cost_function: CostFunction,
-        optimisation_algorithm: OptimisationAlgorithms) 
+        optimisation_algorithm: OptimisationAlgorithms,
+        learning_rate: f32)
     -> NN {
 
         assert!(cycle_size<=training_data.data.len());
-        let mut optimisation = Optimisation::new(&network, optimisation_algorithm, 1.0, cycle_size, Some(0.9));
+        let mut optimisation = Optimisation::new(&network, optimisation_algorithm, learning_rate, cycle_size, Some(0.99));
 
         let training_data_ref = Arc::new(training_data);
         let cost_function_ref = Arc::new(cost_function);
         let mut avg_score: f32 = 0.0;
-        let mut iterator_over_cycles = cycle_size;
+        let mut iterator_over_cycles = 0;
+        let mut epochs: u32 = 0;
+
         while avg_score < precision {
             let network_for_this_iter = Arc::new(network.clone());
             let (tx, rx) = mpsc::channel();
             let mut handles = vec![];
             avg_score = 0.0;
 
-            for i in iterator_over_cycles-cycle_size..iterator_over_cycles {
+            for i in (iterator_over_cycles..iterator_over_cycles+cycle_size).map(|x| x%training_data_ref.data.len()) {
                 let tx_cloned = tx.clone();
                 let new_network = Arc::clone(&network_for_this_iter);
                 let training_data_cloned = Arc::clone(&training_data_ref);
@@ -300,11 +330,11 @@ impl NN {
 
                 let handle = thread::spawn(move || {
                     let new_layers = NN::forward_pass(&new_network, &training_data_cloned.data[i], &cost_function_cloned);
-                    let costs: DVector<f32> = NN::calculate_cost(&new_layers, &training_data_cloned.labels[i]);
-                    let (delta_biases, delta_weights) = NN::backprop(&new_network, &costs, &new_layers, &cost_function_cloned);
+                    let (delta_biases, delta_weights) = NN::backprop(&new_network, &training_data_cloned.labels[i], &new_layers, &cost_function_cloned);
 
                     for i in &delta_biases {
-                        if i.iter().any(|x| x.is_nan()) { panic!("Got NaN biases") };
+                        // dbg!(i);
+                        if i.iter().any(|x| x.is_nan()) {panic!("Got NaN biases") };
                     };
 
                     for i in &delta_weights {
@@ -313,7 +343,7 @@ impl NN {
 
                     let mut guessed_correct = false;
                     if NN::network_classification(&new_layers[new_layers.len()-1]) == NN::network_classification(&training_data_cloned.labels[i]) { guessed_correct = true };
-                    tx_cloned.send((delta_biases, delta_weights, guessed_correct, costs)).unwrap()
+                    tx_cloned.send((delta_biases, delta_weights, guessed_correct, new_layers[new_layers.len()-1].clone(), training_data_cloned.labels[i].clone())).unwrap()
                 });
                 handles.push(handle);
             }
@@ -327,12 +357,12 @@ impl NN {
             let mut delta_biases_sum = first_value.0;
             let mut delta_weights_sum = first_value.1;
             if first_value.2 { avg_score += 1.0 };
-            let mut costs: f32 = first_value.3.iter().map(|x| x.powi(2)).sum();
+            let mut costs: f32 = cost_function_ref.calculate_cost(&first_value.3, &first_value.4);
             for recieved in rx {
                 if recieved.2 { avg_score += 1.0 };
                 delta_biases_sum.iter_mut().enumerate().for_each(|(i,x)| *x+=&recieved.0[i]);
                 delta_weights_sum.iter_mut().enumerate().for_each(|(i,x)| *x+=&recieved.1[i]);
-                costs += recieved.3.iter().map(|x| x.powi(2)).sum::<f32>();
+                costs += cost_function_ref.calculate_cost(&recieved.3, &recieved.4);
             }
 
             let changes_to_apply: (Vec<DMatrix<f32>>, Vec<DVector<f32>>) = optimisation.calculate_change(delta_weights_sum, delta_biases_sum);
@@ -342,34 +372,40 @@ impl NN {
 
             avg_score /= cycle_size as f32;
             costs /= cycle_size as f32;
-            println!("avg score: {avg_score}");
-            println!("avg costs: {costs}");
 
-            if iterator_over_cycles + cycle_size > training_data_ref.data.len() {
-                iterator_over_cycles = cycle_size;
-            } else {
-                iterator_over_cycles += cycle_size;
+            if iterator_over_cycles > training_data_ref.data.len() {
+                iterator_over_cycles-=training_data_ref.data.len();
+                epochs += 1;
+                println!();
+                println!("epochs: {epochs}");
+                println!("avg score: {avg_score}");
+                println!("avg costs: {costs}");
             }
+            iterator_over_cycles += cycle_size;
         }
         network
     }
 
 
-    pub fn non_parallel_training (mut network: NN, cycle_size: usize, training_data: TrainingData, precision: f32, cost_function: CostFunction, optimisation_algorithm: OptimisationAlgorithms) -> NN {
-        let mut optimisation = Optimisation::new(&network, optimisation_algorithm, 1.0, cycle_size, Some(0.9));
+    pub fn non_parallel_training (mut network: NN, cycle_size: usize, training_data: TrainingData, precision: f32, cost_function: CostFunction, optimisation_algorithm: OptimisationAlgorithms, learning_rate: f32) -> NN {
+
         assert!(cycle_size<=training_data.data.len());
+        let mut optimisation = Optimisation::new(&network, optimisation_algorithm, learning_rate, cycle_size, Some(0.99));
         let mut avg_score: f32 = 0.0;
-        let mut iterator_over_cycles = cycle_size;
+        let mut iterator_over_cycles = 0;
+        let mut epochs: u32 = 0;
 
         while avg_score < precision {
+            let mut costs_vec: Vec<(DVector<f32>, DVector<f32>)> = Vec::new();
             avg_score = 0.0;
-            let new_layers = NN::forward_pass(&network, &training_data.data[iterator_over_cycles-cycle_size], &cost_function);
-            let costs: DVector<f32> = NN::calculate_cost(&new_layers, &training_data.labels[iterator_over_cycles-cycle_size]);
-            let (mut delta_biases_sum, mut delta_weights_sum) = NN::backprop(&network, &costs, &new_layers, &cost_function);
-            for i in iterator_over_cycles-cycle_size+1..(iterator_over_cycles) {
+            let new_layers = NN::forward_pass(&network, &training_data.data[iterator_over_cycles%60000], &cost_function);
+            let (mut delta_biases_sum, mut delta_weights_sum) = NN::backprop(&network, &training_data.labels[iterator_over_cycles%60000], &new_layers, &cost_function);
+            if NN::network_classification(new_layers.last().unwrap()) == NN::network_classification(&training_data.labels[iterator_over_cycles%60000]) { avg_score += 1.0 };
+            costs_vec.push((new_layers[new_layers.len()-1].clone(), training_data.labels[iterator_over_cycles%60000].clone()));
+
+            for i in (iterator_over_cycles+1..cycle_size+iterator_over_cycles).map(|x| x%60000) {
                 let new_layers = NN::forward_pass(&network, &training_data.data[i], &cost_function);
-                let costs: DVector<f32> = NN::calculate_cost(&new_layers, &training_data.labels[i]);
-                let (delta_biases, delta_weights) = NN::backprop(&network, &costs, &new_layers, &cost_function);
+                let (delta_biases, delta_weights) = NN::backprop(&network, &training_data.labels[i], &new_layers, &cost_function);
 
                 for i in &delta_biases {
                     if i.iter().any(|x| x.is_nan()) { panic!("Got NaN biases") };
@@ -383,10 +419,12 @@ impl NN {
                 delta_weights_sum.iter_mut().enumerate().for_each(|(i,x)| *x+=&delta_weights[i]);
 
 
-                if NN::network_classification(&network.layers[network.layers.len()-1]) == NN::network_classification(&training_data.labels[i]) { avg_score += 1.0 };
+                if NN::network_classification(new_layers.last().unwrap()) == NN::network_classification(&training_data.labels[i]) { avg_score += 1.0 };
+                costs_vec.push((new_layers[new_layers.len()-1].clone(), training_data.labels[i].clone()));
             }
 
-            let mut costs: f32 = costs.iter().map(|x| x.powi(2)).sum();
+            let mut costs: f32 = costs_vec.iter().map(|x| cost_function.calculate_cost(&x.0, &x.1)).sum();
+            
 
             let changes_to_apply: (Vec<DMatrix<f32>>, Vec<DVector<f32>>) = optimisation.calculate_change(delta_weights_sum, delta_biases_sum);
 
@@ -395,13 +433,16 @@ impl NN {
 
             avg_score /= cycle_size as f32;
             costs /= cycle_size as f32;
-            println!("avg score: {avg_score}");
-            println!("avg costs: {costs}");
-            if iterator_over_cycles + cycle_size > training_data.data.len() {
-                iterator_over_cycles = cycle_size;
-            } else {
-                iterator_over_cycles += cycle_size;
+
+            if iterator_over_cycles > training_data.data.len() {
+                iterator_over_cycles -= cycle_size;
+                epochs += 1;
+                println!();
+                println!("epochs: {epochs}");
+                println!("avg score: {avg_score}");
+                println!("avg costs: {costs}");
             }
+            iterator_over_cycles += cycle_size;
         }
         network
     }

@@ -11,13 +11,14 @@ use optimisation_algos::OptimisationAlgorithms;
 
 fn main() {
     let data_for_training = TrainingData::new("/home/max/Downloads/train-labels.idx1-ubyte", "/home/max/Downloads/train-images.idx3-ubyte");
-    let mut network: NN = match NN::new(4, &[784, 16, 16, 10], InitialisationOptions::He, None) {
+    let mut network: NN = match NN::new(5, &[784, 128, 128, 128, 10], InitialisationOptions::He, None) {
         Ok(network) => network,
         Err(e) => { print!("{e:?}"); panic!("noooo") },
     };
 
-    network = NN::training(network, 500, data_for_training, 0.999, CostFunction::CrossEntropy, OptimisationAlgorithms::StochasticGradientDescent);
-    input_bmps(&mut network, &CostFunction::Quadratic);
+    network = NN::training(network, 512, data_for_training, 0.999, CostFunction::CategoricalCrossEntropy, OptimisationAlgorithms::StochasticGradientDescent, 1.0);
+    run_on_testing_data(&mut network, &CostFunction::CategoricalCrossEntropy);
+    input_bmps(&mut network, &CostFunction::CategoricalCrossEntropy);
 
     // Handling ctrl-c gracefully
     /*

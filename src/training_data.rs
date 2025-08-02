@@ -51,7 +51,7 @@ impl TrainingData {
     }
 
     #[allow(dead_code)]
-    fn view_image (images: &Vec<Vec<u8>>) {
+    fn view_image (images: &[Vec<u8>]) {
         for image in images.iter().enumerate() {
             let img = GrayImage::from_raw(28, 28, image.1.clone()).unwrap();
             img.save(format!("/home/max/Pictures/images/image{}.png", image.0)).unwrap();
@@ -78,7 +78,7 @@ impl TrainingData {
         for _ in 0..number_of_labels {
             reader.read_exact(&mut buffer).unwrap();
             labels.push(DVector::from_fn(10,
-                |i, _| {if ((i) as u8) == buffer[0] {1.0} else {0.0}}));
+                |i, _| {if i as u8 == buffer[0] {1.0} else {0.0}}));
         }
         Ok(labels)
     }
@@ -90,28 +90,28 @@ impl TrainingData {
         // For header
         let mut buffer = [0; 14];
         reader.read_exact(&mut buffer).unwrap();
-        assert_eq!([66 as u8, 77 as u8], buffer[0..2]); // BM
+        assert_eq!([66_u8, 77_u8], buffer[0..2]); // BM
         let _size_of_file: u32 = buffer[2..6].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum(); // FROM MSB
         let _pixel_array_offset: u64 = buffer[10..14].iter().enumerate().map(|(i, x)| (*x as u64)*(256_u64.pow(i as u32))).sum(); 
 
         // DIB header
         let mut buffer = [0; 124];
         reader.read_exact(&mut buffer).unwrap();
-        assert_eq!([124 as u8, 0 as u8, 0 as u8, 0 as u8], buffer[0..4]); // GIMP!! (v5)
+        assert_eq!([124_u8, 0_u8, 0_u8, 0_u8], buffer[0..4]); // GIMP!! (v5)
         // see http://www.jose.it-berater.org/gdi/bitmaps/bitmapv5header.htm
 
-        assert_eq!([28 as u8, 0 as u8, 0 as u8, 0 as u8], buffer[4..8]); // Width 28
-        assert_eq!([28 as u8, 0 as u8, 0 as u8, 0 as u8], buffer[8..12]); // Length 28
-        assert_eq!([1 as u8, 0 as u8], buffer[12..14]); // Planes (must be one)
-        assert_eq!(8 as u32, buffer[14..16].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum()); // Bit count (bit width)
-        assert_eq!([0 as u8, 0 as u8, 0 as u8, 0 as u8], buffer[16..20]); // Uncompressed
+        assert_eq!([28_u8, 0_u8, 0_u8, 0_u8], buffer[4..8]); // Width 28
+        assert_eq!([28_u8, 0_u8, 0_u8, 0_u8], buffer[8..12]); // Length 28
+        assert_eq!([1_u8, 0_u8], buffer[12..14]); // Planes (must be one)
+        assert_eq!(8_u32, buffer[14..16].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum()); // Bit count (bit width)
+        assert_eq!([0_u8, 0_u8, 0_u8, 0_u8], buffer[16..20]); // Uncompressed
         
         let _size_of_image: u32 = buffer[20..24].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum(); 
         // [24..32] is scaling, not required
         let _colours_used: u32 = buffer[32..36].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum();
         let _colours_needed: u32 = buffer[36..40].iter().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum();
         // [40..52] is not valid as no compression
-        assert_eq!([0 as u8, 0 as u8, 0 as u8, 0 as u8], buffer[52..56]); // No alpha mask
+        assert_eq!([0_u8, 0_u8, 0_u8, 0_u8], buffer[52..56]); // No alpha mask
 
         // Ignore rest of DIB
         
@@ -129,8 +129,7 @@ impl TrainingData {
 
     #[allow(dead_code)]
     fn crc32_for_png (_data: &[u8]) -> bool {
-        // TODO!!
-        true
+        todo!();
     }
 
     #[allow(dead_code)]
@@ -141,29 +140,29 @@ impl TrainingData {
         let mut buffer = [0; 8];
 
         // Header
-        reader.read(&mut buffer).unwrap();
-        assert_eq!([137 as u8,80 as u8,78 as u8,71 as u8,13 as u8,10 as u8,26 as u8,10 as u8], buffer); // Assert that the image is a PNG
+        reader.read_exact(&mut buffer).unwrap();
+        assert_eq!([137_u8,80_u8,78_u8,71_u8,13_u8,10_u8,26_u8,10_u8], buffer); // Assert that the image is a PNG
 
         // IHDR chunk
         let mut buffer = [0; 4];
         reader.read_exact(&mut buffer).unwrap();
-        assert_eq!([0 as u8, 0 as u8, 0 as u8, 13 as u8], buffer); // Assert the next chunk (IHDR)
+        assert_eq!([0_u8, 0_u8, 0_u8, 13_u8], buffer); // Assert the next chunk (IHDR)
         // has length 13
 
         let mut buffer = [0; 4];
         reader.read_exact(&mut buffer).unwrap();
-        assert_eq!([73 as u8, 72 as u8, 68 as u8, 82 as u8], buffer); // Assert the chunks name is
+        assert_eq!([73_u8, 72_u8, 68_u8, 82_u8], buffer); // Assert the chunks name is
         // IHDR
 
         let mut buffer = [0; 17];
         reader.read_exact(&mut buffer).unwrap();
-        assert_eq!([0 as u8, 0 as u8, 0 as u8, 28 as u8], buffer[0..4]); // Width of 28 
-        assert_eq!([0 as u8, 0 as u8, 0 as u8, 28 as u8], buffer[4..8]); // Length of 28 
+        assert_eq!([0_u8, 0_u8, 0_u8, 28_u8], buffer[0..4]); // Width of 28 
+        assert_eq!([0_u8, 0_u8, 0_u8, 28_u8], buffer[4..8]); // Length of 28 
         let _bit_depth = buffer[8..9][0]; // Bits per pixel
-        assert_eq!([0 as u8], buffer[9..10]); // Assert greyscale
-        assert_eq!([0 as u8], buffer[10..11]); // Compression 
-        assert_eq!([0 as u8], buffer[11..12]); // Filtering
-        assert_eq!([0 as u8], buffer[12..13]); // Interlacing
+        assert_eq!([0_u8], buffer[9..10]); // Assert greyscale
+        assert_eq!([0_u8], buffer[10..11]); // Compression 
+        assert_eq!([0_u8], buffer[11..12]); // Filtering
+        assert_eq!([0_u8], buffer[12..13]); // Interlacing
         if !TrainingData::crc32_for_png(&buffer) { panic!() }; // Check for checksum
 
         let mut buffer = [0; 4];
@@ -171,13 +170,13 @@ impl TrainingData {
         let _length_of_data: u32 = buffer.iter().rev().enumerate().map(|(i, x)| (*x as u32)*(256_u32.pow(i as u32))).sum();
 
         reader.read_exact(&mut buffer).unwrap();
-        assert_eq!([73 as u8, 68 as u8, 65 as u8, 84 as u8], buffer); // Check it is the IDAT data
+        assert_eq!([73_u8, 68_u8, 65_u8, 84_u8], buffer); // Check it is the IDAT data
 
         // see https://datatracker.ietf.org/doc/html/rfc1950#section-2
 
         let mut buffer = [0; 1];
         reader.read_exact(&mut buffer).unwrap();
-        assert_eq!([120 as u8], buffer); // Assert CMF is 0x78 - 7 for 32K window size and 8 for
+        assert_eq!([120_u8], buffer); // Assert CMF is 0x78 - 7 for 32K window size and 8 for
         // compression type deflate
 
         reader.read_exact(&mut buffer).unwrap();
