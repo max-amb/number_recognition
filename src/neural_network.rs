@@ -103,6 +103,7 @@ impl NN {
             let mut delta_biases: DVector<f32> = DVector::from_element(network.layers[layer+1].nrows(), 0.0);
             let non_activation_applied_layer = &network.weights[layer]*&new_layers[layer]+&network.biases[layer];
 
+            /*
             for row in network.weights[layer].row_iter().enumerate() { // Through the output nodes
                 let activation_applied_value = new_layers[layer+1][row.0];
 
@@ -112,7 +113,7 @@ impl NN {
                             let expected_value = expected_result[row.0];
                             2.0 * (activation_applied_value - expected_value) * (activation_applied_value * ( 1.0 - activation_applied_value ))
                         } else {
-                            delta_biases_list.last().unwrap().iter().sum::<f32>()*network.weights[layer].row(row.0).iter().sum::<f32>()*activation_functions::leaky_relu_derivative(non_activation_applied_layer[row.0], network.alpha)
+                            delta_biases_list.last().unwrap().iter().enumerate().map(|(i, x)| x*network.weights[layer].row(row.0)[i]).sum::<f32>()*activation_functions::leaky_relu_derivative(non_activation_applied_layer[row.0], network.alpha)
                         }
                     },
                     CostFunction::CategoricalCrossEntropy => {
@@ -124,7 +125,15 @@ impl NN {
                         }
                     }, 
                 };
+                dbg!(delta);
+                dbg!(&activation_functions::leaky_relu_derivative(non_activation_applied_layer[row.0], network.alpha));
                 delta_biases[row.0] = delta;
+            }*/
+            if layer == network.weights.len()-1 {
+                delta_biases = DVector::from_iterator(network.layers[layer+1].nrows(), (2.0 * (&new_layers[layer+1] - expected_result)).iter().enumerate().map(|(i,x)| x*new_layers[layer+1][i]*(1.0 - &new_layers[layer+1][i])));
+            } else {
+                dbg!(layer);
+                delta_biases = DVector::from_iterator(network.layers[layer+1].nrows(),(network.weights[layer+1].transpose() * delta_biases_list.last().unwrap()).iter().enumerate().map(|(i,x)| x*activation_functions::leaky_relu_derivative(non_activation_applied_layer[i], network.alpha)));
             }
             delta_weights_list.push(&delta_biases*(new_layers[layer].transpose())); 
             delta_biases_list.push(delta_biases);
