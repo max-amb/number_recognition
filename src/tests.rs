@@ -2,6 +2,7 @@
 pub mod test {
     use crate::neural_network::{CostFunction, InitialisationOptions, NN};
     use nalgebra::{DMatrix, DVector};
+    use float_cmp::assert_approx_eq;
     fn create_nn_for_test () -> (NN, DVector<f32>, DVector<f32>) {
         // Creating network 
         let mut network = match NN::new(3, &[3, 2, 3], InitialisationOptions::Random, Some(0.2)) {
@@ -20,16 +21,29 @@ pub mod test {
         (network, data, expected_output)
     }
 
-    /*
     #[test]
     fn test_backpropagation() {
         let (network, data, expected_output) = self::create_nn_for_test();
         let new_layers = NN::forward_pass(&network, &data, &CostFunction::Quadratic);
-        let (delta_biases, delta_weights) = NN::backprop(&network, &NN::calculate_cost(&new_layers, &expected_output), &new_layers, &CostFunction::Quadratic);
+        let (delta_biases, delta_weights) = NN::backprop(&network, &expected_output, &new_layers, &CostFunction::Quadratic);
 
-        assert_eq!(delta_biases, vec![DVector::from_vec(vec![-0.18908411,  0.94542056]), DVector::from_vec(vec![0.3588527,  -0.26144633, 0.2913903])]);
-        assert_eq!(delta_weights, vec![DMatrix::from_vec(2, 3, vec![-0.04727103, 0.23635514, -0.09454206, 0.47271028, -0.14181308, 0.70906544]), DMatrix::from_vec(3, 2, vec![-0.008971318, 0.0065361583, -0.0072847577, 0.49342248, -0.3594887, 0.40066165])]);
-    }*/
+        let expected_output = [DVector::from_vec(vec![-0.0733288, 0.366644]), DVector::from_vec(vec![0.208924,-0.272186, 0.295432])];
+        for i in delta_biases.iter().enumerate() {
+            for j in i.1.iter().enumerate() {
+                assert_approx_eq!(f32, *j.1, expected_output[i.0][j.0] , epsilon = 0.000001);
+            }
+        }
+
+        let expected_output = [DMatrix::from_vec(2, 3, vec![-0.0183322, 0.091661, -0.0366644, 0.183322, -0.0549966, 0.274983]), DMatrix::from_vec(3, 2, vec![-0.0052231, 0.00680465, -0.0073858, 0.287271, -0.374256, 0.406219])];
+        dbg!(&delta_weights);
+        for i in delta_weights.iter().enumerate() {
+            for j in i.1.row_iter().enumerate() {
+                for k in j.1.iter().enumerate() {
+                    assert_approx_eq!(f32, *k.1, expected_output[i.0][(j.0, k.0)], epsilon = 0.000001);
+                }
+            }
+        }
+    }
 
     #[test]
     fn test_cost() {
