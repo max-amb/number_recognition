@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 ctrlc = "3.4.7"
+float-cmp = "0.10.0"
 image = "0.25.6"
 nalgebra = "0.33.2"
 plotters = { version = "0.3.7", default-features = false, features = ["bitmap_backend", "bitmap_encoder", "plotters-bitmap"] }
