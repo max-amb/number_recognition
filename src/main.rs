@@ -4,36 +4,33 @@ pub mod optimisation_algos;
 pub mod neural_network;
 pub mod tests;
 pub mod training_data;
+pub mod activation_functions;
 
 use training_data::TrainingData;
 use neural_network::{NN, InitialisationOptions, CostFunction};
 use optimisation_algos::OptimisationAlgorithms;
+use std::sync::mpsc;
 
 fn main() {
     let data_for_training = TrainingData::new("/home/max/Downloads/train-labels.idx1-ubyte", "/home/max/Downloads/train-images.idx3-ubyte");
+
     let mut network: NN = match NN::new(5, &[784, 128, 128, 128, 10], InitialisationOptions::He, None) {
         Ok(network) => network,
         Err(e) => { print!("{e:?}"); panic!("noooo") },
     };
 
-    network = NN::training(network, 512, data_for_training, 0.999, CostFunction::CategoricalCrossEntropy, OptimisationAlgorithms::StochasticGradientDescent, 1.0);
-    run_on_testing_data(&mut network, &CostFunction::CategoricalCrossEntropy);
-    input_bmps(&mut network, &CostFunction::CategoricalCrossEntropy);
-
-    // Handling ctrl-c gracefully
-    /*
-    let (ctrlc_transmitter, ctrlc_reciever) = mpsc::channel();
-    ctrlc::set_handler(move || ctrlc_transmitter.send(()).expect("Could not send signal on channel."))
-        .expect("Error setting Ctrl-C handler");
-    ctrlc_reciever.recv().expect("Didn't recieve ctrl-c signal from channel");
-    NN::output_model_to_file(&network, "/home/max/number_recognition/models/tmp.txt").unwrap(); */
+    network = NN::training(network, 512, data_for_training, 0.999, CostFunction::CategoricalCrossEntropy, OptimisationAlgorithms::StochasticGradientDescent, 0.1);
 }
 
 #[allow(dead_code)]
 fn input_bmps (network: &mut NN, cost_function: &CostFunction) {
+    let (ctrlc_transmitter, ctrlc_reciever) = mpsc::channel();
+    ctrlc::set_handler(move || ctrlc_transmitter.send(()).expect("Could not send signal on channel."))
+        .expect("Error setting Ctrl-C handler");
+
     let mut buffer = String::new();
     io::stdin().read_line(&mut buffer).unwrap();
-    while buffer != "STOP" {
+    while ctrlc_reciever.try_recv().is_err() {
         let image = TrainingData::generate_training_data_from_bmp(buffer.trim()).unwrap();
         for i in image.iter().enumerate() {
             if i.0 % 28 == 0 { println!() };
@@ -45,6 +42,9 @@ fn input_bmps (network: &mut NN, cost_function: &CostFunction) {
         buffer = String::new();
         io::stdin().read_line(&mut buffer).unwrap();
     }
+
+    ctrlc_reciever.recv().expect("Didn't recieve ctrl-c signal from channel");
+    NN::output_model_to_file(network, "/home/max/projects/number_recognition/models/tmp.txt").unwrap();
 }
 
 #[allow(dead_code)]

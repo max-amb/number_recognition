@@ -61,7 +61,7 @@ NIX_ENFORCE_NO_NATIVE='1'
 export NIX_ENFORCE_NO_NATIVE
 NIX_HARDENING_ENABLE='bindnow format fortify fortify3 pic relro stackclashprotection stackprotector strictoverflow zerocallusedregs'
 export NIX_HARDENING_ENABLE
-NIX_LDFLAGS='-rpath /home/max/number_recognition/outputs/out/lib  -L/nix/store/wviysrdh6z9wgcbq93pnwfg3mpcail5z-rust-default-1.88.0/lib -L/nix/store/wviysrdh6z9wgcbq93pnwfg3mpcail5z-rust-default-1.88.0/lib -L/nix/store/4n3ywr9yab0s1jfszdxdm6xaa6iywk96-gdb-16.2/lib -L/nix/store/4n3ywr9yab0s1jfszdxdm6xaa6iywk96-gdb-16.2/lib -L/nix/store/wviysrdh6z9wgcbq93pnwfg3mpcail5z-rust-default-1.88.0/lib -L/nix/store/wviysrdh6z9wgcbq93pnwfg3mpcail5z-rust-default-1.88.0/lib -L/nix/store/4n3ywr9yab0s1jfszdxdm6xaa6iywk96-gdb-16.2/lib -L/nix/store/4n3ywr9yab0s1jfszdxdm6xaa6iywk96-gdb-16.2/lib'
+NIX_LDFLAGS='-rpath /home/max/projects/number_recognition/outputs/out/lib  -L/nix/store/wviysrdh6z9wgcbq93pnwfg3mpcail5z-rust-default-1.88.0/lib -L/nix/store/wviysrdh6z9wgcbq93pnwfg3mpcail5z-rust-default-1.88.0/lib -L/nix/store/4n3ywr9yab0s1jfszdxdm6xaa6iywk96-gdb-16.2/lib -L/nix/store/4n3ywr9yab0s1jfszdxdm6xaa6iywk96-gdb-16.2/lib -L/nix/store/wviysrdh6z9wgcbq93pnwfg3mpcail5z-rust-default-1.88.0/lib -L/nix/store/wviysrdh6z9wgcbq93pnwfg3mpcail5z-rust-default-1.88.0/lib -L/nix/store/4n3ywr9yab0s1jfszdxdm6xaa6iywk96-gdb-16.2/lib -L/nix/store/4n3ywr9yab0s1jfszdxdm6xaa6iywk96-gdb-16.2/lib'
 export NIX_LDFLAGS
 NIX_LDFLAGS_FOR_TARGET=' -L/nix/store/wviysrdh6z9wgcbq93pnwfg3mpcail5z-rust-default-1.88.0/lib -L/nix/store/4n3ywr9yab0s1jfszdxdm6xaa6iywk96-gdb-16.2/lib'
 export NIX_LDFLAGS_FOR_TARGET
@@ -177,7 +177,7 @@ name='nix-shell-env'
 export name
 nativeBuildInputs=''
 export nativeBuildInputs
-out='/home/max/number_recognition/outputs/out'
+out='/home/max/projects/number_recognition/outputs/out'
 export out
 outputBin='out'
 outputDev='out'
@@ -208,7 +208,7 @@ preConfigurePhases=' updateAutotoolsGnuConfigScriptsPhase'
 declare -a preFixupHooks=('_moveToShare' '_multioutDocs' '_multioutDevs' )
 preferLocalBuild='1'
 export preferLocalBuild
-prefix='/home/max/number_recognition/outputs/out'
+prefix='/home/max/projects/number_recognition/outputs/out'
 declare -a propagatedBuildDepFiles=('propagated-build-build-deps' 'propagated-native-build-inputs' 'propagated-build-target-deps' )
 propagatedBuildInputs=''
 export propagatedBuildInputs
