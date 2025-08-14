@@ -123,11 +123,6 @@ impl NN {
         (delta_biases_list.into_iter().rev().collect(), delta_weights_list.into_iter().rev().collect())
     }
 
-
-    pub fn calculate_cost (layers: &[DVector<f32>], expected_result: &DVector<f32>) -> DVector<f32> {
-        &layers[layers.len()-1] - expected_result
-    }
- 
     pub fn network_classification (layer: &DVector<f32>) -> usize {
         let mut network_classification: (usize, f32) = (usize::MIN, f32::MIN);
         for i in layer.iter().enumerate() {

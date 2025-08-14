@@ -46,13 +46,6 @@ pub mod test {
     }
 
     #[test]
-    fn test_cost() {
-        let (mut network, data, expected_output) = self::create_nn_for_test();
-        network.layers=NN::forward_pass(&network, &data, &CostFunction::Quadratic);
-        assert_eq!(NN::calculate_cost(&network.layers, &expected_output),  DVector::from_vec(vec![1.0/(1.0+(-1.8_f32).exp()), 1.0/(1.0+(0.2_f32).exp()), 1.0/(1.0+(-0.6_f32).exp())]) - DVector::from_vec(vec![0.0, 1.0, 0.0]))
-    }
-    
-    #[test]
     fn test_forward_pass() {
         let (network, data, _) = self::create_nn_for_test();
         assert_eq!(NN::forward_pass(&network, &data, &CostFunction::Quadratic)[1], DVector::from_vec(vec![-0.025, 1.375])); 
