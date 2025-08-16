@@ -10,7 +10,7 @@ use crate::activation_functions;
 use crate::optimisation_algos::{Optimisation, OptimisationAlgorithms};
 use crate::training_data::TrainingData;
 
-#[derive(PartialEq, Default)]
+#[derive(Default)]
 pub enum InitialisationOptions {
     Random,
     #[default]
@@ -73,13 +73,13 @@ impl NN {
                 .collect(),
             InitialisationOptions::He => (1..number_of_layers)
                 .map(|x| {
+                    let normal_dist =
+                        Normal::new(0.0, (2.0_f32 / (layer_sizes[x - 1] as f32)).sqrt())
+                            .unwrap();
                     DMatrix::from_fn(
                         layer_sizes[x] as usize,
                         layer_sizes[x - 1] as usize,
                         |_, _| {
-                            let normal_dist =
-                                Normal::new(0.0, (2.0_f32 / (layer_sizes[x - 1] as f32)).sqrt())
-                                    .unwrap();
                             normal_dist.sample(&mut rng)
                         },
                     )
