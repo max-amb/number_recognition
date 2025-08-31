@@ -29,23 +29,23 @@ We start with a network with 3 layers (one input, one hidden and one output).
 They have sizes: 3, 2, and 3.
 The weights look like this:
 
-$$\omega^{[1]} = \begin{bmatrix} -0.75 & 0.5 & -0.25 \\ 0.25 & -0.5 & 0.75 \end{bmatrix}$$
+$$\omega^{[1]} = \begin{bmatrix} -0.75 & 0.5 & -0.25 \\\ 0.25 & -0.5 & 0.75 \end{bmatrix}$$
 
-$$\omega^{[2]} = \begin{bmatrix}-0.75 & 0.75 \\\ 0.5 & -0.5 \\ -0.25 & 0.25 \end{bmatrix}$$
+$$\omega^{[2]} = \begin{bmatrix}-0.75 & 0.75 \\\ 0.5 & -0.5 \\\ -0.25 & 0.25 \end{bmatrix}$$
 
 Then we will have biases:
 
-$$b^{[1]} = \begin{bmatrix} 0 \\ 1 \end{bmatrix}$$
+$$b^{[1]} = \begin{bmatrix} 0 \\\ 1 \end{bmatrix}$$
 
-$$b^{[2]} = \begin{bmatrix} 0.75 \\ 0.5 \\ 0.25 \end{bmatrix}$$
+$$b^{[2]} = \begin{bmatrix} 0.75 \\\ 0.5 \\\ 0.25 \end{bmatrix}$$
 
 We will have mock data:
 
-$$\begin{bmatrix} 0.25 \\  0.5 \\ 0.75 \end{bmatrix}$$
+$$\begin{bmatrix} 0.25 \\\  0.5 \\\ 0.75 \end{bmatrix}$$
 
 and expect an output of
 
-$$\begin{bmatrix} 0 \\ 1 \\ 0 \end{bmatrix}$$
+$$\begin{bmatrix} 0 \\\ 1 \\\ 0 \end{bmatrix}$$
 
 For the activation functions, we use a leaky relu ($\alpha = 0.2$), denoted $ReLU$, for the hidden layers and a logistical sigmoid function, denoted $\sigma$, for the output layer.
 
@@ -55,17 +55,17 @@ Everything is shortened to 3 decimal points for conciseness, but the full output
 Layer 1:
 $$
 \begin{aligned}
-a^{[1]} & = ReLU((\omega^{[1]} \times a^{[0]}) + b^{[1]}) \\
-& = ReLU(\begin{bmatrix}-0.75 & 0.5 & -0.25 \\ 0.25 & -0.5 & 0.75 \end{bmatrix} \times \begin{bmatrix} 0.25 \\ 0.5 \\ 0.75 \end{bmatrix} + \begin{bmatrix} 0 \\ 1 \end{bmatrix})\\
-& =  \begin{bmatrix} -0.025 \\ 1.375 \end{bmatrix}
+a^{[1]} & = ReLU((\omega^{[1]} \times a^{[0]}) + b^{[1]}) \\\
+& = ReLU(\begin{bmatrix}-0.75 & 0.5 & -0.25 \\\ 0.25 & -0.5 & 0.75 \end{bmatrix} \times \begin{bmatrix} 0.25 \\\ 0.5 \\\ 0.75 \end{bmatrix} + \begin{bmatrix} 0 \\\ 1 \end{bmatrix})\\\
+& =  \begin{bmatrix} -0.025 \\\ 1.375 \end{bmatrix}
 \end{aligned}
 $$
 
 Layer 2:
 $$
 \begin{aligned}
-a^{[2]} & = \sigma((\omega^{[2]} \times a^{[1]}) + b^{[2]}) \\
-& = \sigma(\begin{bmatrix}-0.75 & 0.75 \\\ 0.5 & -0.5 \\\ -0.25 & 0.25 \end{bmatrix} \times \begin{bmatrix} -0.025 \\\ 1.375 \end{bmatrix} + \begin{bmatrix} 0.75 \\\ 0.5 \\\ 0.25 \end{bmatrix})\\
+a^{[2]} & = \sigma((\omega^{[2]} \times a^{[1]}) + b^{[2]}) \\\
+& = \sigma(\begin{bmatrix}-0.75 & 0.75 \\\ 0.5 & -0.5 \\\ -0.25 & 0.25 \end{bmatrix} \times \begin{bmatrix} -0.025 \\\ 1.375 \end{bmatrix} + \begin{bmatrix} 0.75 \\\ 0.5 \\\ 0.25 \end{bmatrix})\\\
 & =  \begin{bmatrix} 0.858 \\\ 0.450 \\\ 0.646 \end{bmatrix}
 \end{aligned}
 $$
@@ -74,9 +74,9 @@ $$
 #### Deltas for layer 2
 $$
 \begin{aligned}
-\delta^{[2]} & = \nabla_a C \ \odot\ f'(z^{[2]}) \\
-& =  2 \ (\begin{bmatrix} 0.858 \\\ 0.450 \\\ 0.646 \end{bmatrix} - \begin{bmatrix} 0 \\ 1 \\ 0 \end{bmatrix}) \odot \begin{bmatrix} 0.858 (1-0.858) \\\ 0.450 (1-0.450) \\\ 0.646(1-0.646) \end{bmatrix} \\
-& = \begin{bmatrix} 0.209 \\ -0.272 \\ 0.295 \end{bmatrix}
+\delta^{[2]} & = \nabla_a C \ \odot\ f'(z^{[2]}) \\\
+& =  2 \ (\begin{bmatrix} 0.858 \\\ 0.450 \\\ 0.646 \end{bmatrix} - \begin{bmatrix} 0 \\\ 1 \\\ 0 \end{bmatrix}) \odot \begin{bmatrix} 0.858 (1-0.858) \\\ 0.450 (1-0.450) \\\ 0.646(1-0.646) \end{bmatrix} \\\
+& = \begin{bmatrix} 0.209 \\\ -0.272 \\\ 0.295 \end{bmatrix}
 \end{aligned}
 $$
 
@@ -86,15 +86,15 @@ Output: `{{0.208924}, {-0.272186}, {0.295432}}`
 
 #### Biase derivatives for layer 2
 $$
-\frac{\partial C}{\partial b^{[2]}} = \delta^{[2]} = \begin{bmatrix} 0.209 \\ -0.272 \\ 0.295 \end{bmatrix}
+\frac{\partial C}{\partial b^{[2]}} = \delta^{[2]} = \begin{bmatrix} 0.209 \\\ -0.272 \\\ 0.295 \end{bmatrix}
 $$
 
 #### Weight derivatives for layer 2
 $$
 \begin{aligned}
-\frac{\partial C}{\partial \omega^{[2]}} & = \delta^{[2]} {a^{[1]}}^T \\
-& = \begin{bmatrix} 0.209 \\ -0.272 \\ 0.295 \end{bmatrix} \begin{bmatrix} -0.025 & 1.375 \end{bmatrix} \\
-& = \begin{bmatrix} -0.005 & 0.287 \\ 0.007 & -0.374 \\ -0.007 & 0.406 \end{bmatrix}
+\frac{\partial C}{\partial \omega^{[2]}} & = \delta^{[2]} {a^{[1]}}^T \\\
+& = \begin{bmatrix} 0.209 \\\ -0.272 \\\ 0.295 \end{bmatrix} \begin{bmatrix} -0.025 & 1.375 \end{bmatrix} \\\
+& = \begin{bmatrix} -0.005 & 0.287 \\\ 0.007 & -0.374 \\\ -0.007 & 0.406 \end{bmatrix}
 \end{aligned}
 $$
 
@@ -105,9 +105,9 @@ Output: `{{-0.0052231, 0.287271}, {0.00680465, -0.374256}, {-0.0073858, 0.406219
 #### Deltas for layer 1
 $$
 \begin{aligned}
-\delta^{[1]} & = ({\omega^{[2]}}^T \delta^{[2]}) \odot f'(z^{[1]})  \\
-& = (\begin{bmatrix} -0.75 & 0.5 & -0.25 \\ 0.75 & -0.5 & 0.25 \end{bmatrix} \begin{bmatrix} 0.209 \\ -0.272 \\ 0.295 \end{bmatrix}) \otimes \begin{bmatrix} 0.2 \\ 1 \end{bmatrix} \\
-& = \begin{bmatrix} -0.073 \\ 0.367 \end{bmatrix} 
+\delta^{[1]} & = ({\omega^{[2]}}^T \delta^{[2]}) \odot f'(z^{[1]})  \\\
+& = (\begin{bmatrix} -0.75 & 0.5 & -0.25 \\\ 0.75 & -0.5 & 0.25 \end{bmatrix} \begin{bmatrix} 0.209 \\\ -0.272 \\\ 0.295 \end{bmatrix}) \otimes \begin{bmatrix} 0.2 \\\ 1 \end{bmatrix} \\\
+& = \begin{bmatrix} -0.073 \\\ 0.367 \end{bmatrix} 
 \end{aligned}
 $$
 
@@ -117,15 +117,15 @@ Output: `{{-0.0733288}, {0.366644}}`
 
 #### Biase derivatives for layer 1
 $$
-\frac{\partial C}{\partial b^{[1]}} = \delta^{[1]} = \begin{bmatrix} -0.073 \\ 0.367 \end{bmatrix} 
+\frac{\partial C}{\partial b^{[1]}} = \delta^{[1]} = \begin{bmatrix} -0.073 \\\ 0.367 \end{bmatrix} 
 $$
 
 #### Weight derivatives for layer 1
 $$
 \begin{aligned}
-\frac{\partial C}{\partial \omega^{[1]}} & = \delta^{[1]} {a^{[0]}}^T \\
-& = \begin{bmatrix} -0.073 \\ 0.367 \end{bmatrix} \begin{bmatrix} 0.25 & 0.5 & 0.75 \end{bmatrix} \\
-& = \begin{bmatrix} -0.018 & -0.037 & -0.055 \\ 0.092 & 0.183 & 0.275 \end{bmatrix}
+\frac{\partial C}{\partial \omega^{[1]}} & = \delta^{[1]} {a^{[0]}}^T \\\
+& = \begin{bmatrix} -0.073 \\\ 0.367 \end{bmatrix} \begin{bmatrix} 0.25 & 0.5 & 0.75 \end{bmatrix} \\\
+& = \begin{bmatrix} -0.018 & -0.037 & -0.055 \\\ 0.092 & 0.183 & 0.275 \end{bmatrix}
 \end{aligned}
 $$
 
