@@ -53,6 +53,7 @@ Everything is shortened to 3 decimal points for conciseness, but the full output
 
 ### Forward pass
 Layer 1:
+
 $$
 \begin{aligned}
 a^{[1]} & = ReLU((\omega^{[1]} \times a^{[0]}) + b^{[1]}) \\\
@@ -62,6 +63,7 @@ a^{[1]} & = ReLU((\omega^{[1]} \times a^{[0]}) + b^{[1]}) \\\
 $$
 
 Layer 2:
+
 $$
 \begin{aligned}
 a^{[2]} & = \sigma((\omega^{[2]} \times a^{[1]}) + b^{[2]}) \\\
