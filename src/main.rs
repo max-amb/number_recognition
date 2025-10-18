@@ -15,19 +15,21 @@ fn main() {
     let data_for_training = TrainingData::new(
         "/home/max/Downloads/train-labels.idx1-ubyte",
         "/home/max/Downloads/train-images.idx3-ubyte",
+        60000,
     );
 
-    let mut network: NN = NN::new(&[784, 128, 128, 128, 10], InitialisationOptions::He, None);
+    let mut network: NN = NN::new(&[784, 256, 128, 128, 128, 10], InitialisationOptions::He, None);
 
-    network = NN::training(
+    network = NN::non_parallel_training(
         network,
         512,
         data_for_training,
-        0.999,
+        0.96,
         CostFunction::CategoricalCrossEntropy,
         OptimisationAlgorithms::StochasticGradientDescent,
         0.1,
     );
+    NN::run_on_testing_data(&network, &CostFunction::CategoricalCrossEntropy);
 }
 
 #[allow(dead_code)]
@@ -65,22 +67,4 @@ fn input_bmps(network: &mut NN, cost_function: &CostFunction) {
         "/home/max/projects/number_recognition/models/tmp.txt",
     )
     .unwrap();
-}
-
-#[allow(dead_code)]
-fn run_on_testing_data(network: &NN, cost_function: &CostFunction) {
-    let testing_data = TrainingData::new(
-        "/home/max/Downloads/t10k-labels.idx1-ubyte",
-        "/home/max/Downloads/t10k-images.idx3-ubyte",
-    );
-    let mut correct: usize = 0;
-    for j in 0..testing_data.data.len() {
-        let new_layers = NN::forward_pass(network, &testing_data.data[j], cost_function);
-        if NN::network_classification(&new_layers[network.layers.len() - 1])
-            == NN::network_classification(&testing_data.labels[j])
-        {
-            correct += 1
-        };
-    }
-    dbg!(correct);
 }

@@ -1,4 +1,3 @@
-use image::GrayImage;
 use nalgebra::DVector;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
@@ -9,20 +8,20 @@ pub struct TrainingData {
 }
 
 impl TrainingData {
-    pub fn new(file_path_of_labels: &str, file_path_of_images: &str) -> TrainingData {
+    pub fn new(file_path_of_labels: &str, file_path_of_images: &str, size_of_data: usize) -> TrainingData {
         let training = TrainingData {
-            data: TrainingData::read_images(file_path_of_images).unwrap(),
-            labels: TrainingData::read_labels(file_path_of_labels).unwrap(),
+            data: TrainingData::read_images(file_path_of_images, size_of_data).unwrap(),
+            labels: TrainingData::read_labels(file_path_of_labels, size_of_data).unwrap(),
         };
         assert_eq!(training.labels.len(), training.data.len());
         training
     }
 
-    pub fn read_images(file_path_of_images: &str) -> Result<Vec<DVector<f32>>, std::io::Error> {
+    pub fn read_images(file_path_of_images: &str, size_of_data: usize) -> Result<Vec<DVector<f32>>, std::io::Error> {
         let f = File::open(file_path_of_images)?;
         let mut reader = BufReader::with_capacity(4, f);
         let mut buffer = [0; 4];
-        let mut images: Vec<DVector<f32>> = Vec::new();
+        let mut images: Vec<DVector<f32>> = Vec::with_capacity(size_of_data);
 
         // Magic number
         reader.read_exact(&mut buffer).unwrap();
@@ -68,20 +67,11 @@ impl TrainingData {
         Ok(images)
     }
 
-    #[allow(dead_code)]
-    fn view_image(images: &[Vec<u8>]) {
-        for image in images.iter().enumerate() {
-            let img = GrayImage::from_raw(28, 28, image.1.clone()).unwrap();
-            img.save(format!("/home/max/Pictures/images/image{}.png", image.0))
-                .unwrap();
-        }
-    }
-
-    pub fn read_labels(file_path_of_labels: &str) -> Result<Vec<DVector<f32>>, std::io::Error> {
+    pub fn read_labels(file_path_of_labels: &str, size_of_data: usize) -> Result<Vec<DVector<f32>>, std::io::Error> {
         let f = File::open(file_path_of_labels)?;
         let mut reader = BufReader::with_capacity(4, f);
         let mut buffer = [0; 4];
-        let mut labels: Vec<DVector<f32>> = Vec::new();
+        let mut labels: Vec<DVector<f32>> = Vec::with_capacity(size_of_data);
 
         // Magic number
         reader.read_exact(&mut buffer).unwrap();
@@ -251,8 +241,8 @@ impl TrainingData {
         // Calculating the amount of data to be read
 
         Ok(TrainingData {
-            data: TrainingData::read_images("").unwrap(),
-            labels: TrainingData::read_labels("").unwrap(),
+            data: TrainingData::read_images("", 0).unwrap(),
+            labels: TrainingData::read_labels("", 0).unwrap(),
         })
     }
 }
