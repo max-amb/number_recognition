@@ -8,9 +8,9 @@ def main():
     vp2 = ax.hist(rust_data["times"])
 
     ax.autoscale(enable=True, axis='both', tight=False)
-    ax.set_title("Comparison between execution times of rust version (orange) and python version (blue)")
-    ax.xaxis.set_label_text("Execution time (s)")
-    ax.yaxis.set_label_text("Runs")
+    ax.set_title("Comparison between execution times of rust version (orange) and python version (blue)", fontsize = 20)
+    ax.set_xlabel("Execution time (s)", fontsize = 20)
+    ax.set_ylabel("Runs", fontsize = 20)
     plt.show()
 
 def pull_data_from_json(file_path: str) -> dict:
