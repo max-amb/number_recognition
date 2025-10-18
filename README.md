@@ -21,6 +21,10 @@ cd number_recognition
 nix develop
 ```
 
+## Comparison with Pytorch
+The data for training runs can be found in `./results/`.
+The tests were done utilising
+
 ## Testing data
 This section hopes to detail how I obtained my testing data. If you are unsure of anything I recommend you read my blog post which walks through the mathematics!
 
