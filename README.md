@@ -35,7 +35,7 @@ The program exited when the accuracy on test data exceeded $96%$.
 The test data was checked every epoch.
 I have attempted to ensure all parameters in the models are the same but if you spot any disparity please email me or raise an issue.
 Below is a graph displaying the results
-![Figure 1](./results/plot.png)
+![Figure 1](./benchmarking/plot.png)
 
 ## Testing data
 This section hopes to detail how I obtained my testing data. If you are unsure of anything I recommend you read my blog post which walks through the mathematics!
