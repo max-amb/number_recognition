@@ -19,8 +19,7 @@ pub enum InitialisationOptions {
 
 #[derive(Debug)]
 pub enum CostFunction {
-    Quadratic,
-    CategoricalCrossEntropy,
+    Quadratic, CategoricalCrossEntropy,
 }
 
 impl CostFunction {
@@ -88,7 +87,7 @@ impl NN {
         };
 
         let biases: Vec<DVector<f32>> = (1..number_of_layers)
-            .map(|x| DVector::from_fn(layer_sizes[x] as usize, |_, _| rng.random_range(-1.0..=1.0)))
+            .map(|x| DVector::from_element(layer_sizes[x] as usize, /*|_, _| rng.random_range(-1.0..=1.0)*/ 0.0))
             .collect();
 
         let alpha = alpha_value.unwrap_or(0.01);
@@ -109,7 +108,7 @@ impl NN {
         for layer in 0..network.weights.len() - 1 {
             new_layers.push(
                 (&network.weights[layer] * &new_layers[layer] + &network.biases[layer])
-                    .map(|x| activation_functions::leaky_relu(x, network.alpha)),
+                    .map(activation_functions::relu),
             );
         }
         new_layers.push(match cost_function {
@@ -437,16 +436,12 @@ impl NN {
                 .enumerate()
                 .for_each(|(i, x)| *x -= &changes_to_apply.1[i]);
 
-            if iterator_over_cycles > training_data_ref.data.len() {
-                avg_score /= iterator_over_cycles as f32;
-                costs /= iterator_over_cycles as f32;
-                iterator_over_cycles -= training_data_ref.data.len();
-                epochs += 1;
-                println!();
-                println!("epochs: {epochs}");
-                println!("avg score: {avg_score}");
-                println!("avg costs: {costs}");
-                if avg_score > precision {
+            if iterator_over_cycles >= training_data_ref.data.len() {
+                iterator_over_cycles = 0;
+                let testing_data_score = NN::run_on_testing_data(&network, &cost_function_ref);
+                let x: f32 = (testing_data_score as f32) / 10000.0;
+                println!("{x}");
+                if x > precision {
                     break;
                 }
             }
@@ -472,13 +467,14 @@ impl NN {
             cycle_size,
             Some(0.99),
         );
+        /*
         let mut avg_score: f32 = 0.0;
+        let mut epochs: u32 = 0; */
         let mut iterator_over_cycles = 0;
-        let mut epochs: u32 = 0;
 
-        while avg_score < precision {
-            let mut costs_vec: Vec<(DVector<f32>, DVector<f32>)> = Vec::new();
-            avg_score = 0.0;
+        loop {
+            /* let mut costs_vec: Vec<(DVector<f32>, DVector<f32>)> = Vec::new();
+            avg_score = 0.0; */
             let new_layers = NN::forward_pass(
                 &network,
                 &training_data.data[iterator_over_cycles % 60000],
@@ -490,6 +486,7 @@ impl NN {
                 &new_layers,
                 &cost_function,
             );
+            /*
             if NN::network_classification(new_layers.last().unwrap())
                 == NN::network_classification(&training_data.labels[iterator_over_cycles % 60000])
             {
@@ -498,7 +495,7 @@ impl NN {
             costs_vec.push((
                 new_layers[new_layers.len() - 1].clone(),
                 training_data.labels[iterator_over_cycles % 60000].clone(),
-            ));
+            ));*/
 
             for i in
                 (iterator_over_cycles + 1..cycle_size + iterator_over_cycles).map(|x| x % 60000)
@@ -511,6 +508,7 @@ impl NN {
                     &cost_function,
                 );
 
+                /*
                 for i in &delta_biases {
                     if i.iter().any(|x| x.is_nan()) {
                         panic!("Got NaN biases")
@@ -522,6 +520,7 @@ impl NN {
                         panic!("Got NaN weights")
                     };
                 }
+                */
 
                 delta_biases_sum
                     .iter_mut()
@@ -532,6 +531,7 @@ impl NN {
                     .enumerate()
                     .for_each(|(i, x)| *x += &delta_weights[i]);
 
+                /*
                 if NN::network_classification(new_layers.last().unwrap())
                     == NN::network_classification(&training_data.labels[i])
                 {
@@ -540,13 +540,14 @@ impl NN {
                 costs_vec.push((
                     new_layers[new_layers.len() - 1].clone(),
                     training_data.labels[i].clone(),
-                ));
+                ));*/
             }
 
+            /*
             let mut costs: f32 = costs_vec
                 .iter()
                 .map(|x| cost_function.calculate_cost(&x.0, &x.1))
-                .sum();
+                .sum(); */
 
             let changes_to_apply: (Vec<DMatrix<f32>>, Vec<DVector<f32>>) =
                 optimisation.calculate_change(delta_weights_sum, delta_biases_sum);
@@ -562,19 +563,36 @@ impl NN {
                 .enumerate()
                 .for_each(|(i, x)| *x -= &changes_to_apply.1[i]);
 
-            avg_score /= cycle_size as f32;
-            costs /= cycle_size as f32;
-
             if iterator_over_cycles > training_data.data.len() {
-                iterator_over_cycles -= cycle_size;
-                epochs += 1;
-                println!();
-                println!("epochs: {epochs}");
-                println!("avg score: {avg_score}");
-                println!("avg costs: {costs}");
+                iterator_over_cycles = 0;
+                let testing_data_score = NN::run_on_testing_data(&network, &cost_function);
+                let x: f32 = (testing_data_score as f32) / 10000.0;
+                println!("{x}");
+                if x > precision {
+                    break;
+                }
             }
             iterator_over_cycles += cycle_size;
         }
         network
+    }
+
+    #[allow(dead_code)]
+    pub fn run_on_testing_data(network: &NN, cost_function: &CostFunction) -> usize {
+        let testing_data = TrainingData::new(
+            "/home/max/Downloads/t10k-labels.idx1-ubyte",
+            "/home/max/Downloads/t10k-images.idx3-ubyte",
+            60000,
+        );
+        let mut correct: usize = 0;
+        for j in 0..testing_data.data.len() {
+            let new_layers = NN::forward_pass(network, &testing_data.data[j], cost_function);
+            if NN::network_classification(&new_layers[network.layers.len() - 1])
+                == NN::network_classification(&testing_data.labels[j])
+            {
+                correct += 1
+            };
+        }
+        correct
     }
 }
