@@ -22,7 +22,7 @@ nix develop
 ```
 
 ## Speed comparison with pytorch
-The data for training runs can be found in `./results/`.
+The data for training runs can be found in `./benchmarking/`.
 The tests were done utilising hyperfine utilising the following commands:
 ```bash
 hyperfine --runs 100 "python3 main.py" --export-json ./py_results.json \
