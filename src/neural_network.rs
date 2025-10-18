@@ -473,8 +473,6 @@ impl NN {
         let mut iterator_over_cycles = 0;
 
         loop {
-            /* let mut costs_vec: Vec<(DVector<f32>, DVector<f32>)> = Vec::new();
-            avg_score = 0.0; */
             let new_layers = NN::forward_pass(
                 &network,
                 &training_data.data[iterator_over_cycles % 60000],
@@ -486,16 +484,6 @@ impl NN {
                 &new_layers,
                 &cost_function,
             );
-            /*
-            if NN::network_classification(new_layers.last().unwrap())
-                == NN::network_classification(&training_data.labels[iterator_over_cycles % 60000])
-            {
-                avg_score += 1.0
-            };
-            costs_vec.push((
-                new_layers[new_layers.len() - 1].clone(),
-                training_data.labels[iterator_over_cycles % 60000].clone(),
-            ));*/
 
             for i in
                 (iterator_over_cycles + 1..cycle_size + iterator_over_cycles).map(|x| x % 60000)
@@ -508,20 +496,6 @@ impl NN {
                     &cost_function,
                 );
 
-                /*
-                for i in &delta_biases {
-                    if i.iter().any(|x| x.is_nan()) {
-                        panic!("Got NaN biases")
-                    };
-                }
-
-                for i in &delta_weights {
-                    if i.iter().any(|x| x.is_nan()) {
-                        panic!("Got NaN weights")
-                    };
-                }
-                */
-
                 delta_biases_sum
                     .iter_mut()
                     .enumerate()
@@ -531,23 +505,7 @@ impl NN {
                     .enumerate()
                     .for_each(|(i, x)| *x += &delta_weights[i]);
 
-                /*
-                if NN::network_classification(new_layers.last().unwrap())
-                    == NN::network_classification(&training_data.labels[i])
-                {
-                    avg_score += 1.0
-                };
-                costs_vec.push((
-                    new_layers[new_layers.len() - 1].clone(),
-                    training_data.labels[i].clone(),
-                ));*/
             }
-
-            /*
-            let mut costs: f32 = costs_vec
-                .iter()
-                .map(|x| cost_function.calculate_cost(&x.0, &x.1))
-                .sum(); */
 
             let changes_to_apply: (Vec<DMatrix<f32>>, Vec<DVector<f32>>) =
                 optimisation.calculate_change(delta_weights_sum, delta_biases_sum);
