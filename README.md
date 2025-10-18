@@ -25,10 +25,13 @@ nix develop
 The data for training runs can be found in `./results/`.
 The tests were done utilising hyperfine utilising the following commands:
 ```bash
-hyperfine --runs 100 "python3 main.py" --export-json ./x.json; cd ../number_recognition/; hyperfine --runs 100 "./target/release/number_recognition" --export-json ./x.json
+hyperfine --runs 100 "python3 main.py" --export-json ./py_results.json \
+cd ../number_recognition/ \
+hyperfine --runs 100 "./target/release/number_recognition" --export-json ./rust_results.json
 ```
 and the `non_parallel_training` method was used for parity with the pytorch version.
-The network that the models were tested on followed a $[728] -> [256] -> [10]$ architecure and utilised stochastic gradient descent and He initialisation and the program exited when the accuracy on test data exceeded $96\%$.
+The network that the models were tested on followed a $[728] \to [256] \to [10]$ architecure and utilised stochastic gradient descent and He initialisation.
+The program exited when the accuracy on test data exceeded $96%$.
 The test data was checked every epoch.
 I have attempted to ensure all parameters in the models are the same but if you spot any disparity please email me or raise an issue.
 Below is a graph displaying the results
