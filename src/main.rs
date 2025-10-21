@@ -20,7 +20,7 @@ fn main() {
 
     let mut network: NN = NN::new(&[784, 256, 128, 128, 128, 10], InitialisationOptions::He, None);
 
-    network = NN::non_parallel_training(
+    network = NN::training(
         network,
         512,
         data_for_training,

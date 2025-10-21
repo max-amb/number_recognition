@@ -25,8 +25,8 @@ nix develop
 The data for training runs can be found in `./benchmarking/`.
 The tests were done utilising hyperfine utilising the following commands:
 ```bash
-hyperfine --runs 100 "python3 main.py" --export-json ./py_results.json \
-cd ../number_recognition/ \
+hyperfine --runs 100 "python3 main.py" --export-json ./py_results.json && \
+cd ../ && \
 hyperfine --runs 100 "./target/release/number_recognition" --export-json ./rust_results.json
 ```
 and the `non_parallel_training` method was used for parity with the pytorch version.
