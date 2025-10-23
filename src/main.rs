@@ -18,7 +18,7 @@ fn main() {
         60000,
     );
 
-    let mut network: NN = NN::new(&[784, 256, 128, 128, 128, 10], InitialisationOptions::He, None);
+    let mut network: NN = NN::new(&[784, 256, 10], InitialisationOptions::He, None);
 
     network = NN::training(
         network,

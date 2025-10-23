@@ -332,10 +332,7 @@ impl NN {
 
         let training_data_ref = Arc::new(training_data);
         let cost_function_ref = Arc::new(cost_function);
-        let mut avg_score: f32 = 0.0;
-        let mut costs: f32 = 0.0;
         let mut iterator_over_cycles = 0;
-        let mut epochs: u32 = 0;
 
         loop {
             let network_for_this_iter = Arc::new(network.clone());
@@ -363,32 +360,10 @@ impl NN {
                         &cost_function_cloned,
                     );
 
-                    for i in &delta_biases {
-                        // dbg!(i);
-                        if i.iter().any(|x| x.is_nan()) {
-                            panic!("Got NaN biases")
-                        };
-                    }
-
-                    for i in &delta_weights {
-                        if i.iter().any(|x| x.is_nan()) {
-                            panic!("Got NaN weights")
-                        };
-                    }
-
-                    let mut guessed_correct = false;
-                    if NN::network_classification(&new_layers[new_layers.len() - 1])
-                        == NN::network_classification(&training_data_cloned.labels[i])
-                    {
-                        guessed_correct = true
-                    };
                     tx_cloned
                         .send((
                             delta_biases,
                             delta_weights,
-                            guessed_correct,
-                            new_layers[new_layers.len() - 1].clone(),
-                            training_data_cloned.labels[i].clone(),
                         ))
                         .unwrap()
                 });
@@ -403,14 +378,7 @@ impl NN {
             let first_value = rx.recv().unwrap();
             let mut delta_biases_sum = first_value.0;
             let mut delta_weights_sum = first_value.1;
-            if first_value.2 {
-                avg_score += 1.0
-            };
-            costs += cost_function_ref.calculate_cost(&first_value.3, &first_value.4);
             for recieved in rx {
-                if recieved.2 {
-                    avg_score += 1.0
-                };
                 delta_biases_sum
                     .iter_mut()
                     .enumerate()
@@ -419,7 +387,6 @@ impl NN {
                     .iter_mut()
                     .enumerate()
                     .for_each(|(i, x)| *x += &recieved.1[i]);
-                costs += cost_function_ref.calculate_cost(&recieved.3, &recieved.4);
             }
 
             let changes_to_apply: (Vec<DMatrix<f32>>, Vec<DVector<f32>>) =
@@ -436,6 +403,7 @@ impl NN {
                 .enumerate()
                 .for_each(|(i, x)| *x -= &changes_to_apply.1[i]);
 
+            println!("{iterator_over_cycles}");
             if iterator_over_cycles >= training_data_ref.data.len() {
                 iterator_over_cycles = 0;
                 let testing_data_score = NN::run_on_testing_data(&network, &cost_function_ref);
