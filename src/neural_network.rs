@@ -108,7 +108,7 @@ impl NN {
         for layer in 0..network.weights.len() - 1 {
             new_layers.push(
                 (&network.weights[layer] * &new_layers[layer] + &network.biases[layer])
-                    .map(|x| activation_functions::leaky_relu(network.alpha, x)),
+                    .map(|x| activation_functions::leaky_relu(x, network.alpha)),
             );
         }
         new_layers.push(match cost_function {
