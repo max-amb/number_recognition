@@ -1,3 +1,4 @@
+#![allow(unused_imports)]
 use std::io;
 
 pub mod activation_functions;
@@ -12,13 +13,18 @@ use std::sync::mpsc;
 use training_data::TrainingData;
 
 fn main() {
-    let data_for_training = TrainingData::new(
+    let data_for_training= TrainingData::new(
         "/home/max/Downloads/train-labels.idx1-ubyte",
         "/home/max/Downloads/train-images.idx3-ubyte",
         60000,
     );
 
+<<<<<<< Updated upstream
     let mut network: NN = NN::new(&[784, 256, 128, 128, 128, 10], InitialisationOptions::He, None);
+=======
+    // let mut network: NN = NN::generate_model_from_file("/home/max/Documents/model.txt").unwrap();
+    let mut network: NN = NN::new(&[784, 256, 10], InitialisationOptions::He, None);
+>>>>>>> Stashed changes
 
     network = NN::non_parallel_training(
         network,
@@ -27,9 +33,11 @@ fn main() {
         0.96,
         CostFunction::CategoricalCrossEntropy,
         OptimisationAlgorithms::StochasticGradientDescent,
-        0.1,
+        0.8,
+        64,
     );
-    NN::run_on_testing_data(&network, &CostFunction::CategoricalCrossEntropy);
+    // NN::output_model_to_file(&network, "/home/max/Documents/model.txt").unwrap();
+    // input_bmps(&mut network, &CostFunction::CategoricalCrossEntropy);
 }
 
 #[allow(dead_code)]
@@ -54,9 +62,12 @@ fn input_bmps(network: &mut NN, cost_function: &CostFunction) {
         }
         network.layers = NN::forward_pass(network, &image, cost_function);
         println!("\n{:?}", (&network.layers[network.layers.len() - 1]));
+        println!("Network classifies number as {:?}", NN::network_classification(&network.layers[network.layers.len() - 1]));
 
+        let prev_buffer: String = buffer;
         buffer = String::new();
         io::stdin().read_line(&mut buffer).unwrap();
+        if buffer == "\n" { buffer = prev_buffer; };
     }
 
     ctrlc_reciever
