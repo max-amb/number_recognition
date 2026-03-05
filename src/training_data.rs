@@ -25,6 +25,8 @@ impl TrainingData {
 
         // Magic number
         reader.read_exact(&mut buffer).unwrap();
+        assert_eq!(buffer[0], 0);
+        assert_eq!(buffer[1], 0);
         assert_eq!(buffer[2], 8);
         assert_eq!(buffer[3], 3);
 
@@ -75,6 +77,8 @@ impl TrainingData {
 
         // Magic number
         reader.read_exact(&mut buffer).unwrap();
+        assert_eq!(buffer[0], 0);
+        assert_eq!(buffer[1], 0);
         assert_eq!(buffer[2], 8);
         assert_eq!(buffer[3], 1);
 

@@ -63,8 +63,8 @@ impl Optimisation {
 
     pub fn calculate_change(
         &mut self,
-        delta_weights_sum: Vec<DMatrix<f32>>,
-        delta_biases_sum: Vec<DVector<f32>>,
+        delta_weights_sum: &Vec<DMatrix<f32>>,
+        delta_biases_sum: &Vec<DVector<f32>>,
     ) -> (Vec<DMatrix<f32>>, Vec<DVector<f32>>) {
         match &self.optimisation_algorithm {
             OptimisationAlgorithms::StochasticGradientDescent => (

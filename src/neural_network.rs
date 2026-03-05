@@ -320,6 +320,7 @@ impl NN {
         cost_function: CostFunction,
         optimisation_algorithm: OptimisationAlgorithms,
         learning_rate: f32,
+        step_size: usize
     ) -> NN {
         assert!(cycle_size <= training_data.data.len());
         let mut optimisation = Optimisation::new(
@@ -339,8 +340,7 @@ impl NN {
             let (tx, rx) = mpsc::channel();
             let mut handles = vec![];
 
-            for i in (iterator_over_cycles..iterator_over_cycles + cycle_size)
-                .map(|x| x % training_data_ref.data.len())
+            for i in (iterator_over_cycles..iterator_over_cycles + cycle_size).step_by(step_size)
             {
                 let tx_cloned = tx.clone();
                 let new_network = Arc::clone(&network_for_this_iter);
@@ -348,17 +348,27 @@ impl NN {
                 let cost_function_cloned = Arc::clone(&cost_function_ref);
 
                 let handle = thread::spawn(move || {
-                    let new_layers = NN::forward_pass(
-                        &new_network,
-                        &training_data_cloned.data[i],
-                        &cost_function_cloned,
-                    );
-                    let (delta_biases, delta_weights) = NN::backprop(
-                        &new_network,
-                        &training_data_cloned.labels[i],
-                        &new_layers,
-                        &cost_function_cloned,
-                    );
+                    let mut deltas = Vec::new();
+                    for j in (i..i+step_size).map(|x| x%training_data_cloned.data.len()){
+                        let new_layers = NN::forward_pass(
+                            &new_network,
+                            &training_data_cloned.data[j],
+                            &cost_function_cloned,
+                        );
+                        deltas.push(NN::backprop(
+                            &new_network,
+                            &training_data_cloned.labels[j],
+                            &new_layers,
+                            &cost_function_cloned,
+                        ));
+                    };
+
+                    let mut delta_biases = deltas[0].0.clone();
+                    let mut delta_weights= deltas[0].1.clone();
+                    for bias_weight_pair in deltas.iter().skip(1) {
+                        delta_biases.iter_mut().enumerate().for_each(|(j, x)| *x += &bias_weight_pair.0[j]);
+                        delta_weights.iter_mut().enumerate().for_each(|(j, x)| *x += &bias_weight_pair.1[j]);
+                    }
 
                     tx_cloned
                         .send((
@@ -378,7 +388,7 @@ impl NN {
             let first_value = rx.recv().unwrap();
             let mut delta_biases_sum = first_value.0;
             let mut delta_weights_sum = first_value.1;
-            for recieved in rx {
+            for recieved in rx { // Assumes all data has been recieved
                 delta_biases_sum
                     .iter_mut()
                     .enumerate()
@@ -390,7 +400,7 @@ impl NN {
             }
 
             let changes_to_apply: (Vec<DMatrix<f32>>, Vec<DVector<f32>>) =
-                optimisation.calculate_change(delta_weights_sum, delta_biases_sum);
+                optimisation.calculate_change(&delta_weights_sum, &delta_biases_sum);
 
             network
                 .weights
@@ -403,7 +413,7 @@ impl NN {
                 .enumerate()
                 .for_each(|(i, x)| *x -= &changes_to_apply.1[i]);
 
-            println!("{iterator_over_cycles}");
+            // println!("{iterator_over_cycles}");
             if iterator_over_cycles >= training_data_ref.data.len() {
                 iterator_over_cycles = 0;
                 let testing_data_score = NN::run_on_testing_data(&network, &cost_function_ref);
@@ -476,7 +486,7 @@ impl NN {
             }
 
             let changes_to_apply: (Vec<DMatrix<f32>>, Vec<DVector<f32>>) =
-                optimisation.calculate_change(delta_weights_sum, delta_biases_sum);
+                optimisation.calculate_change(&delta_weights_sum, &delta_biases_sum);
 
             network
                 .weights

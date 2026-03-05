@@ -37,6 +37,9 @@ The results in green are results from the parallelised rust version, orange is t
 Below is a graph displaying the results
 ![Figure 1](./benchmarking/plot.png)
 
+Now, when parallelised, using the same conditions as above, the parallelised version was about $10\times$ faster than the non parallelised training
+![Figure 2](./results/parallel.png)
+
 ## Testing data
 This section hopes to detail how I obtained my testing data. If you are unsure of anything I recommend you read my blog post which walks through the mathematics!
 
