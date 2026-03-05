@@ -19,14 +19,10 @@ fn main() {
         60000,
     );
 
-<<<<<<< Updated upstream
-    let mut network: NN = NN::new(&[784, 256, 128, 128, 128, 10], InitialisationOptions::He, None);
-=======
     // let mut network: NN = NN::generate_model_from_file("/home/max/Documents/model.txt").unwrap();
     let mut network: NN = NN::new(&[784, 256, 10], InitialisationOptions::He, None);
->>>>>>> Stashed changes
 
-    network = NN::non_parallel_training(
+    network = NN::training(
         network,
         512,
         data_for_training,

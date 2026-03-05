@@ -333,10 +333,7 @@ impl NN {
 
         let training_data_ref = Arc::new(training_data);
         let cost_function_ref = Arc::new(cost_function);
-        let mut avg_score: f32 = 0.0;
-        let mut costs: f32 = 0.0;
         let mut iterator_over_cycles = 0;
-        let mut epochs: u32 = 0;
 
         loop {
             let network_for_this_iter = Arc::new(network.clone());
@@ -368,30 +365,11 @@ impl NN {
 
                     let mut delta_biases = deltas[0].0.clone();
                     let mut delta_weights= deltas[0].1.clone();
-                    for i in 1..deltas.len() {
-                        delta_biases.iter_mut().enumerate().for_each(|(j, x)| *x += &deltas[i].0[j]);
-                        delta_weights.iter_mut().enumerate().for_each(|(j, x)| *x += &deltas[i].1[j]);
+                    for bias_weight_pair in deltas.iter().skip(1) {
+                        delta_biases.iter_mut().enumerate().for_each(|(j, x)| *x += &bias_weight_pair.0[j]);
+                        delta_weights.iter_mut().enumerate().for_each(|(j, x)| *x += &bias_weight_pair.1[j]);
                     }
 
-                    for i in &delta_biases {
-                        // dbg!(i);
-                        if i.iter().any(|x| x.is_nan()) {
-                            panic!("Got NaN biases")
-                        };
-                    }
-
-                    for i in &delta_weights {
-                        if i.iter().any(|x| x.is_nan()) {
-                            panic!("Got NaN weights")
-                        };
-                    }
-
-                    let mut guessed_correct = false;
-                    if NN::network_classification(&new_layers[new_layers.len() - 1])
-                        == NN::network_classification(&training_data_cloned.labels[i])
-                    {
-                        guessed_correct = true
-                    };
                     tx_cloned
                         .send((
                             delta_biases,
@@ -419,7 +397,6 @@ impl NN {
                     .iter_mut()
                     .enumerate()
                     .for_each(|(i, x)| *x += &recieved.1[i]);
-                costs += cost_function_ref.calculate_cost(&recieved.3, &recieved.4);
             }
 
             let changes_to_apply: (Vec<DMatrix<f32>>, Vec<DVector<f32>>) =
