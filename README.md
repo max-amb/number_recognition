@@ -22,7 +22,7 @@ nix develop
 ```
 
 ## Speed comparison with pytorch
-The data for training runs can be found in `./benchmarking/`.
+The data for training runs can be found in `./results/`.
 The tests were done utilising hyperfine utilising the following commands:
 ```bash
 hyperfine --runs 100 "python3 main.py" --export-json ./py_results.json && \
@@ -35,7 +35,7 @@ The test data was checked every epoch.
 I have attempted to ensure all parameters in the models are the same but if you spot any disparity please email me or raise an issue.
 The results in green are results from the parallelised rust version, orange is the non-parallelised rust version and blue is the pytorch version (also non-parallelised).
 Below is a graph displaying the results
-![Figure 1](./benchmarking/plot.png)
+![Figure 1](./results/plot.png)
 
 Now, when parallelised, using the same conditions as above, the parallelised version was about $10\times$ faster than the non parallelised training
 ![Figure 2](./results/parallel.png)
