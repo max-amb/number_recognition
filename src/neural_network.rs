@@ -312,6 +312,7 @@ impl NN {
         })
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn training(
         mut network: NN,
         cycle_size: usize,
@@ -323,6 +324,8 @@ impl NN {
         step_size: usize
     ) -> NN {
         assert!(cycle_size <= training_data.data.len());
+        assert!(step_size <= training_data.data.len());
+
         let mut optimisation = Optimisation::new(
             &network,
             optimisation_algorithm,
@@ -331,11 +334,19 @@ impl NN {
             Some(0.99),
         );
 
+        let (ctrlc_transmitter, ctrlc_reciever) = mpsc::channel();
+        ctrlc::set_handler(move || {
+            ctrlc_transmitter
+                .send(())
+                .expect("Could not send signal on channel.")
+        })
+        .expect("Error setting Ctrl-C handler");
+
         let training_data_ref = Arc::new(training_data);
         let cost_function_ref = Arc::new(cost_function);
         let mut iterator_over_cycles = 0;
 
-        loop {
+        while ctrlc_reciever.try_recv().is_err() {
             let network_for_this_iter = Arc::new(network.clone());
             let (tx, rx) = mpsc::channel();
             let mut handles = vec![];
@@ -413,7 +424,7 @@ impl NN {
                 .enumerate()
                 .for_each(|(i, x)| *x -= &changes_to_apply.1[i]);
 
-            // println!("{iterator_over_cycles}");
+            println!("{iterator_over_cycles}");
             if iterator_over_cycles >= training_data_ref.data.len() {
                 iterator_over_cycles = 0;
                 let testing_data_score = NN::run_on_testing_data(&network, &cost_function_ref);
@@ -424,7 +435,16 @@ impl NN {
                 }
             }
             iterator_over_cycles += cycle_size;
-        }
+        } 
+
+        ctrlc_reciever
+            .recv()
+            .expect("Didn't recieve ctrl-c signal from channel");
+        NN::output_model_to_file(
+            &network,
+        "/home/max/projects/number_recognition/models/tmp.txt",
+        ).unwrap();
+
         network
     }
 

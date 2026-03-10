@@ -20,19 +20,19 @@ fn main() {
     );
 
     // let mut network: NN = NN::generate_model_from_file("/home/max/Documents/model.txt").unwrap();
-    let mut network: NN = NN::new(&[784, 256, 10], InitialisationOptions::He, None);
+    let mut network: NN = NN::new(&[784, 512, 256, 10], InitialisationOptions::He, None);
 
     network = NN::training(
         network,
         512,
         data_for_training,
-        0.96,
+        0.99,
         CostFunction::CategoricalCrossEntropy,
         OptimisationAlgorithms::StochasticGradientDescent,
         0.8,
         64,
     );
-    // NN::output_model_to_file(&network, "/home/max/Documents/model.txt").unwrap();
+    NN::output_model_to_file(&network, "/home/max/Documents/model.txt").unwrap();
     // input_bmps(&mut network, &CostFunction::CategoricalCrossEntropy);
 }
 
