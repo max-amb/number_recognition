@@ -33,12 +33,7 @@ The network that the models were tested on followed a $[728] \to [256] \to [10]$
 The program exited when the accuracy on test data exceeded $96%$.
 The test data was checked every epoch.
 I have attempted to ensure all parameters in the models are the same but if you spot any disparity please email me or raise an issue.
-The results in green are results from the parallelised rust version, orange is the non-parallelised rust version and blue is the pytorch version (also non-parallelised).
-Below is a graph displaying the results
 ![Figure 1](./results/plot.png)
-
-Now, when parallelised, using the same conditions as above, the parallelised version was about $10\times$ faster than the non parallelised training
-![Figure 2](./results/parallel.png)
 
 ## Testing data
 This section hopes to detail how I obtained my testing data. If you are unsure of anything I recommend you read my blog post which walks through the mathematics!

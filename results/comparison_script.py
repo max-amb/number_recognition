@@ -1,14 +1,17 @@
 import json
 import matplotlib.pyplot as plt
 def main():
-    parallel = pull_data_from_json("./parallel.json")
-    rust_data = pull_data_from_json("./rust_results.json")
+    parallel_rust = pull_data_from_json("./parallel.json")
+    rust = pull_data_from_json("./rust_results.json")
+    python = pull_data_from_json("./py_results.json")
     fig, ax = plt.subplots(figsize=(10, 100))
-    b1 = ax.hist(parallel["times"], color="red")
-    b2 = ax.hist(rust_data["times"], color="orange")
+    b1 = ax.hist(parallel_rust["times"], color="red", label="Parallel rust data")
+    b2 = ax.hist(rust["times"], color="orange", label="Non-parallelised rust")
+    b3 = ax.hist(python["times"], color="blue", label="Non-parallelised pytorch")
+    ax.legend();
 
     ax.autoscale(enable=True, axis='both', tight=False)
-    ax.set_title("Comparison between execution times of rust version (orange) and rust parallel version (red)")
+    ax.set_title("Copmparison between execution times in different implementations")
     ax.xaxis.set_label_text("Execution time (s)")
     ax.yaxis.set_label_text("Runs")
     plt.show()
@@ -18,8 +21,6 @@ def pull_data_from_json(file_path: str) -> dict:
         data = json.load(f)
     results = data["results"]
     return results[0]
-
-
 
 if __name__ == "__main__":
     main()
