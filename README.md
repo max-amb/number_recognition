@@ -35,6 +35,9 @@ The test data was checked every epoch.
 I have attempted to ensure all parameters in the models are the same but if you spot any disparity please email me or raise an issue.
 ![Figure 1](./results/plot.png)
 
+While the amount of parallel rust data looks strangely little compared to the other data in the graph, this is not in fact because there was less runs.
+Instead, it is because the data is so clustered with a standard deviation of $\approx 0.2$ (compared to the non-parallel results with $\sigma \approx 11.7$).
+
 ## Testing data
 This section hopes to detail how I obtained my testing data. If you are unsure of anything I recommend you read my blog post which walks through the mathematics!
 
