@@ -5,7 +5,7 @@ def main():
     rust = pull_data_from_json("./rust_results.json")
     python = pull_data_from_json("./py_results.json")
     fig, ax = plt.subplots(figsize=(10, 100))
-    b1 = ax.hist(parallel_rust["times"], color="red", label="Parallel rust data")
+    b1 = ax.hist(parallel_rust["times"], color="red", label="Parallelised rust")
     b2 = ax.hist(rust["times"], color="orange", label="Non-parallelised rust")
     b3 = ax.hist(python["times"], color="blue", label="Non-parallelised pytorch")
     ax.legend();
