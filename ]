@@ -6,7 +6,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::sync::{Arc, mpsc};
 use std::thread;
 
-use crate::activation_functions::{ActivationFunction, leaky_relu_derivative};
+use crate::activation_functions::ActivationFunction;
 use crate::optimisation_algos::{Optimisation, OptimisationAlgorithms};
 use crate::training_data::TrainingData;
 
@@ -104,24 +104,25 @@ impl NN {
         input: &DVector<f32>,
         cost_function: &CostFunction,
     ) -> Vec<DVector<f32>> {
-        let normal_activation_function = ActivationFunction::LeakyRelu { alpha: network.alpha };
-        let final_activation_function = match cost_function {
-            CostFunction::Quadratic => ActivationFunction::Sigmoid,
-            CostFunction::CategoricalCrossEntropy => ActivationFunction::Softmax,
-        };
-
+        let normal_activation_function= ActivationFunction::Relu;
+        let final_activation_function= ActivationFunction::Softmax;
         let mut new_layers: Vec<DVector<f32>> = vec![input.clone()];
         for layer in 0..network.weights.len() - 1 {
             new_layers.push(
                 normal_activation_function.apply(&network.weights[layer] * &new_layers[layer] + &network.biases[layer])
             );
         }
-        new_layers.push(
-            final_activation_function.apply(&network.weights[network.weights.len() - 1]
+        new_layers.push(match cost_function {
+            CostFunction::Quadratic => activation_functions::sigmoid(&network.weights[network.weights.len() - 1]
                 * &new_layers[network.weights.len() - 1]
                 + &network.biases[network.weights.len() - 1]
             ),
-        );
+            CostFunction::CategoricalCrossEntropy => activation_functions::softmax(
+                &network.weights[network.weights.len() - 1]
+                    * &new_layers[network.weights.len() - 1]
+                    + &network.biases[network.weights.len() - 1]
+            ),
+        });
         new_layers
     }
 
@@ -160,7 +161,7 @@ impl NN {
                         .iter()
                         .enumerate()
                         .map(|(i, x)| {
-                            x * leaky_relu_derivative(
+                            x * activation_functions::leaky_relu_derivative(
                                 non_activation_applied_layer[i],
                                 network.alpha,
                             )

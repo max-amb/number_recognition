@@ -6,6 +6,7 @@ pub mod neural_network;
 pub mod optimisation_algos;
 pub mod tests;
 pub mod training_data;
+pub mod primitives;
 
 use neural_network::{CostFunction, InitialisationOptions, NN};
 use optimisation_algos::OptimisationAlgorithms;
