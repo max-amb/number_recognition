@@ -6,9 +6,12 @@ use std::io::{BufRead, BufReader, Write};
 use std::sync::{Arc, mpsc};
 use std::thread;
 
+use crate::primitives::*;
+use crate::cost::CostFunction;
 use crate::activation_functions::{ActivationFunction, leaky_relu_derivative};
 use crate::optimisation_algos::{Optimisation, OptimisationAlgorithms};
 use crate::training_data::TrainingData;
+use crate::layers::Layer;
 
 #[derive(Default)]
 pub enum InitialisationOptions {
@@ -18,50 +21,20 @@ pub enum InitialisationOptions {
 }
 
 #[derive(Debug)]
-pub enum CostFunction {
-    Quadratic, CategoricalCrossEntropy,
-}
-
-impl CostFunction {
-    pub fn calculate_cost(&self, observed: &DVector<f32>, expected: &DVector<f32>) -> f32 {
-        match self {
-            CostFunction::Quadratic => observed
-                .iter()
-                .enumerate()
-                .map(|(i, x)| (x - expected[i]).powi(2))
-                .sum::<f32>(),
-            CostFunction::CategoricalCrossEntropy => -expected
-                .iter()
-                .enumerate()
-                .map(|(i, x)| x * ((f32::EPSILON + observed[i]).ln()))
-                .sum::<f32>(),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
 pub struct NN {
-    pub layers: Vec<DVector<f32>>,
-    pub weights: Vec<DMatrix<f32>>,
-    pub biases: Vec<DVector<f32>>,
-    pub alpha: f32,
+    layers: Vec<Layer>,
+    cost_function: CostFunction
 }
 
 impl NN {
     pub fn new(
-        layer_sizes: &[i32],
+        layers: Vec<Layer>,
         initialisation: InitialisationOptions,
-        alpha_value: Option<f32>,
     ) -> NN {
-        let number_of_layers = layer_sizes.len();
         let mut rng = rand::rng();
 
-        let layers: Vec<DVector<f32>> = (0..number_of_layers)
-            .map(|x| DVector::from_element(layer_sizes[x] as usize, 0.0))
-            .collect();
-
-        let weights: Vec<DMatrix<f32>> = match initialisation {
-            InitialisationOptions::Random => (1..number_of_layers)
+        match initialisation {
+            InitialisationOptions::Random => 
                 .map(|x| {
                     DMatrix::from_fn(
                         layer_sizes[x] as usize,
@@ -90,12 +63,8 @@ impl NN {
             .map(|x| DVector::from_element(layer_sizes[x] as usize, /*|_, _| rng.random_range(-1.0..=1.0)*/ 0.0))
             .collect();
 
-        let alpha = alpha_value.unwrap_or(0.01);
         Self {
             layers,
-            weights,
-            biases,
-            alpha,
         }
     }
 
@@ -311,6 +280,7 @@ impl NN {
         })
     }
 
+    /*
     #[allow(clippy::too_many_arguments)]
     pub fn training(
         mut network: NN,
@@ -445,7 +415,7 @@ impl NN {
         ).unwrap();
 
         network
-    }
+    }*/
 
     pub fn non_parallel_training(
         mut network: NN,

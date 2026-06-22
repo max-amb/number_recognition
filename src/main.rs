@@ -7,8 +7,11 @@ pub mod optimisation_algos;
 pub mod tests;
 pub mod training_data;
 pub mod primitives;
+pub mod cost;
+pub mod layers;
 
-use neural_network::{CostFunction, InitialisationOptions, NN};
+use neural_network::{InitialisationOptions, NN};
+use cost::CostFunction;
 use optimisation_algos::OptimisationAlgorithms;
 use std::sync::mpsc;
 use training_data::TrainingData;

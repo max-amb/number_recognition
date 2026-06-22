@@ -5,7 +5,11 @@ edition = "2024"
 
 [dependencies]
 ctrlc = "3.4.7"
+enum_dispatch = "0.3.13"
 float-cmp = "0.10.0"
 nalgebra = "0.33.2"
 rand = "0.9.1"
 rand_distr = "0.5.1"
+
+[dev-dependencies]
+hegeltest = "0.21.2"

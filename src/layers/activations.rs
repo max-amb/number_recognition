@@ -1,19 +1,21 @@
 use nalgebra::DVector;
+use crate::primitives::Forward;
 
-pub enum ActivationFunction {
+#[derive(Debug)]
+pub enum Activation {
     Sigmoid,
     Softmax,
     LeakyRelu { alpha : f32 },
     Relu
 }
 
-impl ActivationFunction {
-    pub fn apply(&self, layer: DVector<f32>) -> DVector<f32> {
+impl Forward for Activation {
+    fn run (&self, layer: DVector<f32>) -> DVector<f32> {
         match self {
-            ActivationFunction::Sigmoid => sigmoid(layer),
-            ActivationFunction::Relu => relu(layer),
-            ActivationFunction::LeakyRelu { alpha }=> leaky_relu(layer, *alpha),
-            ActivationFunction::Softmax => softmax(layer)
+            Activation::Sigmoid => sigmoid(layer),
+            Activation::Relu => relu(layer),
+            Activation::LeakyRelu { alpha } => leaky_relu(layer, *alpha),
+            Activation::Softmax => softmax(layer)
         }
     }
 }
