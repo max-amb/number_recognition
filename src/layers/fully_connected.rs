@@ -13,7 +13,7 @@ impl Forward for FullyConnected {
     fn run(&self, prev_layer: Matrix) -> Matrix {
         Matrix {
             data: &self.weights * prev_layer.data + &self.biases,
-            shape: prev_layer.shape
+            shape: (self.output_size, 1)
         }
     } 
 }

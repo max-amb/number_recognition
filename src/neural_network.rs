@@ -1,3 +1,4 @@
+/*
 use nalgebra::{DMatrix, DVector};
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
@@ -520,4 +521,4 @@ impl NN {
         }
         correct
     }
-}
+}*/

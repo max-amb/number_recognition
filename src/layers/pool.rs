@@ -1,3 +1,5 @@
+use nalgebra::DMatrix;
+
 #[derive(Debug)]
 pub struct Pool {
     size: u64,

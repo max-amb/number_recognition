@@ -1,5 +1,6 @@
 use nalgebra::DVector;
-use crate::primitives::Forward;
+
+use crate::layers::{Forward, Mat};
 
 #[derive(Debug)]
 pub enum Activation {
@@ -10,13 +11,13 @@ pub enum Activation {
 }
 
 impl Forward for Activation {
-    fn run (&self, layer: DVector<f32>) -> DVector<f32> {
-        match self {
-            Activation::Sigmoid => sigmoid(layer),
-            Activation::Relu => relu(layer),
-            Activation::LeakyRelu { alpha } => leaky_relu(layer, *alpha),
-            Activation::Softmax => softmax(layer)
-        }
+    fn run (&self, layer: Mat) -> Mat{
+        layer.fmap(|val| match self {
+            Activation::Sigmoid => sigmoid(val),
+            Activation::Relu => relu(val),
+            Activation::LeakyRelu { alpha } => leaky_relu(val, *alpha),
+            Activation::Softmax => softmax(val)
+        })
     }
 }
 

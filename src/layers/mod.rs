@@ -8,4 +8,4 @@ pub use fully_connected::FullyConnected;
 pub use convolution::Convolution;
 pub use activations::Activation;
 pub use pool::Pool;
-pub use primitives::{Forward, Matrix};
+pub use primitives::{Forward, Mat};

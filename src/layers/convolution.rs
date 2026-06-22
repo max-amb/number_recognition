@@ -1,3 +1,7 @@
+use nalgebra::{DMatrix};
+
+use crate::layers::{Forward, Matrix};
+
 #[derive(Debug)]
 pub struct Kernel {
     kernel: DMatrix<f32>,
@@ -13,8 +17,7 @@ pub struct Convolution {
 }
 
 impl Forward for Convolution {
-    fn run(&self, prev_layer: DVector<f32>) -> DVector<f32> {
+    fn run(&self, prev_layer: Matrix) -> Matrix {
          todo!();
     } 
 }
-
