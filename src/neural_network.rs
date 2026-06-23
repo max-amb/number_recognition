@@ -44,6 +44,7 @@ impl NN {
                     )
                 })
                 .collect(),
+                // USE from_distribution!!!!!!!
             InitialisationOptions::He => (1..number_of_layers)
                 .map(|x| {
                     let normal_dist =
