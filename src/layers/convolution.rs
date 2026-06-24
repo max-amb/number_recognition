@@ -75,7 +75,7 @@ impl Forward for Convolution {
         let res = (flattened_kernel * prev_columnised)
             .reshape_generic(Dyn(new_nrows * new_ncols), Const::<1>);
         Mat {
-            data: res+&self.filter.bias,
+            data: res+DVector::from_element(new_nrows*new_ncols, self.filter.bias),
             shape: (new_nrows, new_ncols),
         }
     }

@@ -40,7 +40,7 @@ impl Convolvable for Pool {
 
 impl Forward for Pool {
     fn run(&self, prev_layer: Mat) -> Mat {
-        let shape = out_shape(&prev_layer, self);
+        let shape = out_shape(prev_layer.shape, self);
         let prev_columnised = im2col(prev_layer, self);
         let mut result: Vec<f32> = Vec::with_capacity(prev_columnised.ncols());
         for col in prev_columnised.column_iter() {

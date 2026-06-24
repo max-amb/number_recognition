@@ -1,9 +1,11 @@
 use nalgebra::{DMatrix, DVector, Dyn};
+use enum_dispatch::enum_dispatch;
 
 use crate::layers::Activation;
 use crate::layers::Convolution;
 use crate::layers::FullyConnected;
 use crate::layers::Pool;
+use crate::initialisation::InitialisationOptions;
 
 pub trait Convolvable {
     fn shape(&self) -> (usize, usize);
@@ -38,19 +40,21 @@ pub fn im2col(m: Mat, conv: &dyn Convolvable) -> DMatrix<f32> {
     DMatrix::from_vec(out_rows, out_cols, columns)
 }
 
-pub fn out_shape(m: &Mat, conv: &dyn Convolvable) -> (usize, usize) {
-    let (nrows, ncols) = m.shape;
+pub fn out_shape(in_shape: (usize, usize), conv: &dyn Convolvable) -> (usize, usize) {
+    let (nrows, ncols) = in_shape;
     let (crows, ccols) = conv.shape();
     let new_nrows = ((nrows + conv.zero_padding()) - crows) / conv.stride();
     let new_ncols = ((ncols + conv.zero_padding()) - ccols) / conv.stride();
     (new_nrows, new_ncols)
 }
 
+#[enum_dispatch]
 pub trait Forward {
     fn run(&self, prev_layer: Mat) -> Mat;
 }
 
 #[derive(Debug)]
+#[enum_dispatch(Forward)]
 pub enum Layer {
     FC(FullyConnected),
     CONV(Convolution),
