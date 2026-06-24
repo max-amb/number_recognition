@@ -8,4 +8,4 @@ pub use activations::Activation;
 pub use convolution::{Convolution, Kernel};
 pub use fully_connected::FullyConnected;
 pub use pool::Pool;
-pub use primitives::{Convolvable, Forward, Mat};
+pub use primitives::{Convolvable, Forward, Mat, Layer};

@@ -3,11 +3,25 @@ use nalgebra::DVector;
 use crate::layers::primitives::{im2col, out_shape};
 use crate::layers::{Convolvable, Forward, Mat};
 
+use crate::initialisation::Initialisable;
+
 #[derive(Debug)]
 pub struct Pool {
     shape: (usize, usize),
     stride: usize,
     pooling_function: fn(DVector<f32>) -> f32,
+}
+
+impl Pool {
+    fn new(shape: (usize, usize), stride: usize, pooling_function: fn(DVector<f32>) -> f32) -> Self {
+        Self { shape, stride, pooling_function }
+    } 
+}
+
+impl Initialisable for Pool {
+    fn initialise(self, _previous_shape: (usize, usize)) -> Self {
+        self     
+    } 
 }
 
 impl Convolvable for Pool {

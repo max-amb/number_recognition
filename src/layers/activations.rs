@@ -1,6 +1,7 @@
 use nalgebra::DVector;
 
 use crate::layers::{Forward, Mat};
+use crate::initialisation::Initialisable;
 
 #[derive(Debug)]
 pub enum Activation {
@@ -18,6 +19,12 @@ impl Forward for Activation {
             Activation::LeakyRelu { alpha } => leaky_relu(val, *alpha),
             Activation::Softmax => softmax(val),
         })
+    }
+}
+
+impl Initialisable for Activation {
+    fn initialise(self, _previous_shape: (usize, usize)) -> Self {
+        self 
     }
 }
 

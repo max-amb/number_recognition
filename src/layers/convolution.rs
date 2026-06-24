@@ -3,12 +3,26 @@ use nalgebra::{Const, DMatrix, Dyn, DVector};
 use crate::layers::primitives::{im2col, out_shape};
 use crate::layers::{Convolvable, Forward, Mat};
 
+use crate::initialisation::Initialisable;
+
 #[derive(Debug)]
 pub struct Kernel {
     pub kernel: DMatrix<f32>,
-    pub bias: DVector<f32>,
+    pub bias: f32,
     pub stride: usize,
     pub zero_padding: usize,
+}
+
+impl Kernel {
+    fn new(kernel: DMatrix<f32>, stride: usize, zero_padding: usize) -> Self {
+        Self { kernel, bias: 0.0, stride, zero_padding }
+    }
+}
+
+impl Initialisable for Kernel {
+    fn initialise(self, _previous_shape: (usize, usize)) -> Self {
+        self       
+    } 
 }
 
 impl Convolvable for Kernel {
@@ -31,10 +45,26 @@ pub struct Convolution {
     filter: Kernel,
 }
 
+impl Initialisable for Convolution {
+    fn initialise(self, _previous_shape: (usize, usize)) -> Self {
+        self 
+    } 
+}
+
+impl Convolution {
+    fn new(kern: Kernel) -> Self {
+        Self { filter: kern }
+    }
+
+    fn from_kernel(kernel: DMatrix<f32>, stride: usize, zero_padding: usize) -> Self {
+        Self { filter: Kernel::new(kernel, stride, zero_padding)  }
+    }
+}
+
 impl Forward for Convolution {
     fn run(&self, prev_layer: Mat) -> Mat {
         let kern = &self.filter;
-        let (new_nrows, new_ncols) = out_shape(&prev_layer, kern);
+        let (new_nrows, new_ncols) = out_shape(prev_layer.shape, kern);
 
         let prev_columnised = im2col(prev_layer, kern);
         // Cloning kernel isn't horrific, should be somewhat small
