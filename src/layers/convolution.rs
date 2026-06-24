@@ -1,4 +1,4 @@
-use nalgebra::{Const, DMatrix, Dyn};
+use nalgebra::{Const, DMatrix, Dyn, DVector};
 
 use crate::layers::primitives::{im2col, out_shape};
 use crate::layers::{Convolvable, Forward, Mat};
@@ -6,7 +6,7 @@ use crate::layers::{Convolvable, Forward, Mat};
 #[derive(Debug)]
 pub struct Kernel {
     pub kernel: DMatrix<f32>,
-    pub biases: DMatrix<f32>,
+    pub bias: DVector<f32>,
     pub stride: usize,
     pub zero_padding: usize,
 }
@@ -45,7 +45,7 @@ impl Forward for Convolution {
         let res = (flattened_kernel * prev_columnised)
             .reshape_generic(Dyn(new_nrows * new_ncols), Const::<1>);
         Mat {
-            data: res,
+            data: res+&self.filter.bias,
             shape: (new_nrows, new_ncols),
         }
     }
