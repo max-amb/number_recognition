@@ -1,8 +1,8 @@
-use nalgebra::{DMatrix, DVector};
+use nalgebra::{DMatrix, DVector, Dyn};
 use std::ops::{Deref, DerefMut};
 
 use crate::layers::FullyConnected;
-use crate::layers::Convolution;
+use crate::layers::{Convolution, Kernel};
 use crate::layers::Activation;
 use crate::layers::Pool;
 

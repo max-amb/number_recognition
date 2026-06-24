@@ -5,7 +5,7 @@ pub mod convolution;
 pub mod activations;
 
 pub use fully_connected::FullyConnected;
-pub use convolution::Convolution;
+pub use convolution::{Convolution, Kernel};
 pub use activations::Activation;
 pub use pool::Pool;
 pub use primitives::{Forward, Mat};
