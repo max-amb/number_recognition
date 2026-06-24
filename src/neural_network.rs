@@ -9,7 +9,7 @@ use std::thread;
 use crate::cost::CostFunction;
 use crate::optimisation_algos::{Optimisation, OptimisationAlgorithms};
 use crate::training_data::TrainingData;
-use crate::layers::{Forward, Layer};
+use crate::layers::{Forward, Layer, Mat};
 use crate::initialisation::Initialisable;
 
 #[derive(Debug)]
@@ -31,27 +31,15 @@ impl NN {
 
     pub fn forward_pass(
         network: &NN,
-        input: &DVector<f32>,
-        cost_function: &CostFunction,
-    ) -> Vec<DVector<f32>> {
-        let normal_activation_function = ActivationFunction::LeakyRelu { alpha: network.alpha };
-        let final_activation_function = match cost_function {
-            CostFunction::Quadratic => ActivationFunction::Sigmoid,
-            CostFunction::CategoricalCrossEntropy => ActivationFunction::Softmax,
-        };
-
-        let mut new_layers: Vec<DVector<f32>> = vec![input.clone()];
-        for layer in 0..network.weights.len() - 1 {
-            new_layers.push(
-                normal_activation_function.apply(&network.weights[layer] * &new_layers[layer] + &network.biases[layer])
-            );
+        input: Mat,
+    ) -> Vec<Mat> {
+        let mut new_layers: Vec<Mat> = Vec::new();
+        let mut curr_inp = input.clone();
+        for layer in &network.layers {
+            let new_inp = layer.run(curr_inp);
+            new_layers.push(new_inp.clone());
+            curr_inp = new_inp;
         }
-        new_layers.push(
-            final_activation_function.apply(&network.weights[network.weights.len() - 1]
-                * &new_layers[network.weights.len() - 1]
-                + &network.biases[network.weights.len() - 1]
-            ),
-        );
         new_layers
     }
 
