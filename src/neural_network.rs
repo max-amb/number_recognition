@@ -1,4 +1,3 @@
-/*
 use nalgebra::{DMatrix, DVector};
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
@@ -7,19 +6,11 @@ use std::io::{BufRead, BufReader, Write};
 use std::sync::{Arc, mpsc};
 use std::thread;
 
-use crate::primitives::*;
 use crate::cost::CostFunction;
-use crate::activation_functions::{ActivationFunction, leaky_relu_derivative};
 use crate::optimisation_algos::{Optimisation, OptimisationAlgorithms};
 use crate::training_data::TrainingData;
-use crate::layers::Layer;
-
-#[derive(Default)]
-pub enum InitialisationOptions {
-    Random,
-    #[default]
-    He,
-}
+use crate::layers::{Forward, Layer};
+use crate::initialisation::Initialisable;
 
 #[derive(Debug)]
 pub struct NN {
@@ -29,45 +20,13 @@ pub struct NN {
 
 impl NN {
     pub fn new(
-        layers: Vec<Layer>,
-        initialisation: InitialisationOptions,
+        mut layers: Vec<Layer>,
+        input_shape: (usize, usize),
+        cost_function: CostFunction
     ) -> NN {
-        let mut rng = rand::rng();
-
-        match initialisation {
-            InitialisationOptions::Random => 
-                .map(|x| {
-                    DMatrix::from_fn(
-                        layer_sizes[x] as usize,
-                        layer_sizes[x - 1] as usize,
-                        |_, _| rng.random_range(-1.0..=1.0),
-                    )
-                })
-                .collect(),
-                // USE from_distribution!!!!!!!
-            InitialisationOptions::He => (1..number_of_layers)
-                .map(|x| {
-                    let normal_dist =
-                        Normal::new(0.0, (2.0_f32 / (layer_sizes[x - 1] as f32)).sqrt())
-                            .unwrap();
-                    DMatrix::from_fn(
-                        layer_sizes[x] as usize,
-                        layer_sizes[x - 1] as usize,
-                        |_, _| {
-                            normal_dist.sample(&mut rng)
-                        },
-                    )
-                })
-                .collect(),
-        };
-
-        let biases: Vec<DVector<f32>> = (1..number_of_layers)
-            .map(|x| DVector::from_element(layer_sizes[x] as usize, /*|_, _| rng.random_range(-1.0..=1.0)*/ 0.0))
-            .collect();
-
-        Self {
-            layers,
-        }
+        let mut curr_shape = input_shape;
+        layers.iter_mut().for_each(|x| curr_shape = x.initialise(curr_shape));
+        NN { layers, cost_function }
     }
 
     pub fn forward_pass(
@@ -522,4 +481,4 @@ impl NN {
         }
         correct
     }
-}*/
+}
