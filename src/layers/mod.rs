@@ -1,11 +1,11 @@
-pub mod primitives;
+pub mod activations;
+pub mod convolution;
 pub mod fully_connected;
 pub mod pool;
-pub mod convolution;
-pub mod activations;
+pub mod primitives;
 
-pub use fully_connected::FullyConnected;
-pub use convolution::{Convolution, Kernel};
 pub use activations::Activation;
+pub use convolution::{Convolution, Kernel};
+pub use fully_connected::FullyConnected;
 pub use pool::Pool;
-pub use primitives::{Forward, Mat};
+pub use primitives::{Convolvable, Forward, Mat};

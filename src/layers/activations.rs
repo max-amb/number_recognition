@@ -6,17 +6,17 @@ use crate::layers::{Forward, Mat};
 pub enum Activation {
     Sigmoid,
     Softmax,
-    LeakyRelu { alpha : f32 },
-    Relu
+    LeakyRelu { alpha: f32 },
+    Relu,
 }
 
 impl Forward for Activation {
-    fn run (&self, layer: Mat) -> Mat{
+    fn run(&self, layer: Mat) -> Mat {
         layer.fmap(|val| match self {
             Activation::Sigmoid => sigmoid(val),
             Activation::Relu => relu(val),
             Activation::LeakyRelu { alpha } => leaky_relu(val, *alpha),
-            Activation::Softmax => softmax(val)
+            Activation::Softmax => softmax(val),
         })
     }
 }
@@ -41,9 +41,17 @@ fn relu(layer: DVector<f32>) -> DVector<f32> {
 }
 
 pub fn leaky_relu_derivative(input: f32, alpha: f32) -> f32 {
-    if input.lt(&0.0) { alpha } else { 1.0 }
+    if input.lt(&0.0) {
+        alpha
+    } else {
+        1.0
+    }
 }
 
 pub fn relu_derivative(input: f32) -> f32 {
-    if input.lt(&0.0) { 0.0 } else { 1.0 }
+    if input.lt(&0.0) {
+        0.0
+    } else {
+        1.0
+    }
 }

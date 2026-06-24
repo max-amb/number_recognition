@@ -1,10 +1,50 @@
 use nalgebra::{DMatrix, DVector, Dyn};
-use std::ops::{Deref, DerefMut};
 
-use crate::layers::FullyConnected;
-use crate::layers::{Convolution, Kernel};
 use crate::layers::Activation;
+use crate::layers::Convolution;
+use crate::layers::FullyConnected;
 use crate::layers::Pool;
+
+pub trait Convolvable {
+    fn shape(&self) -> (usize, usize);
+    fn zero_padding(&self) -> usize;
+    fn stride(&self) -> usize;
+}
+
+pub fn im2col(m: Mat, conv: &dyn Convolvable) -> DMatrix<f32> {
+    let v: DVector<f32> = m.data;
+    let (nrows, ncols) = m.shape;
+    let (krows, kcols) = conv.shape();
+    assert!(krows <= nrows + conv.zero_padding() && kcols <= ncols + conv.zero_padding());
+    let out_rows = krows * kcols;
+    let out_cols = (((nrows + conv.zero_padding()) - krows + 1)
+        * ((ncols + conv.zero_padding()) - kcols + 1))
+        / conv.stride();
+
+    let reshaped: DMatrix<f32> = v.reshape_generic(Dyn(nrows), Dyn(ncols)).resize(
+        nrows + conv.zero_padding(),
+        ncols + conv.zero_padding(),
+        0.0,
+    );
+
+    let mut columns = Vec::with_capacity(out_rows * out_cols);
+
+    for i in (0..=((nrows + conv.zero_padding()) - krows)).step_by(conv.stride()) {
+        for j in (0..=((ncols + conv.zero_padding()) - kcols)).step_by(conv.stride()) {
+            let patch = reshaped.view((i, j), (krows, kcols));
+            columns.extend(patch.into_iter().copied());
+        }
+    }
+    DMatrix::from_vec(out_rows, out_cols, columns)
+}
+
+pub fn out_shape(m: &Mat, conv: &dyn Convolvable) -> (usize, usize) {
+    let (nrows, ncols) = m.shape;
+    let (crows, ccols) = conv.shape();
+    let new_nrows = ((nrows + conv.zero_padding()) - crows) / conv.stride();
+    let new_ncols = ((ncols + conv.zero_padding()) - ccols) / conv.stride();
+    (new_nrows, new_ncols)
+}
 
 pub trait Forward {
     fn run(&self, prev_layer: Mat) -> Mat;
@@ -15,12 +55,12 @@ pub enum Layer {
     FC(FullyConnected),
     CONV(Convolution),
     POOL(Pool),
-    ACTIVATION(Activation)
+    ACTIVATION(Activation),
 }
 
 pub struct Mat {
     pub data: DVector<f32>,
-    pub shape: (usize, usize)
+    pub shape: (usize, usize),
 }
 
 impl Mat {
@@ -29,7 +69,7 @@ impl Mat {
         assert_eq!(new_data.shape(), self.shape);
         Self {
             data: new_data,
-            shape: self.shape
+            shape: self.shape,
         }
     }
 }
@@ -38,26 +78,26 @@ impl From<DMatrix<f32>> for Mat {
     fn from(mat: DMatrix<f32>) -> Self {
         Self {
             data: DVector::from_vec(mat.into_iter().copied().collect()),
-            shape: mat.shape()
+            shape: mat.shape(),
         }
     }
 }
-
-impl Deref for Mat {
-    type Target = DVector<f32>;  
-    fn deref(&self) -> &Self::Target {
-        &self.data 
-    }
-}
-
-impl DerefMut for Mat {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.data 
-    }
-}
-
+//
+// impl Deref for Mat {
+//     type Target = DVector<f32>;
+//     fn deref(&self) -> &Self::Target {
+//         &self.data
+//     }
+// }
+//
+// impl DerefMut for Mat {
+//     fn deref_mut(&mut self) -> &mut Self::Target {
+//         &mut self.data
+//     }
+// }
+//
 // impl IntoIterator for Mat  {
-//     type Item = f32; 
+//     type Item = f32;
 //     type IntoIter = std::vec::IntoIter<Self::Item>;
 //
 //     fn into_iter(self) -> Self::IntoIter {
@@ -79,7 +119,7 @@ mod tests {
         let n_rows = tc.draw(gs::integers().min_value(1).filter(|x| vec.len() % x == 0));
         let n_cols = vec.len() / n_rows;
 
-        assert_eq!(n_rows*n_cols, vec.len());
+        assert_eq!(n_rows * n_cols, vec.len());
 
         let dmat: DMatrix<f32> = DMatrix::from_vec(n_rows, n_cols, vec.clone());
         let mat: Mat = Mat::from(dmat);
@@ -88,4 +128,3 @@ mod tests {
         assert_eq!(mat.shape, (n_rows, n_cols));
     }
 }
-
