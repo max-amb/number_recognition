@@ -5,7 +5,6 @@ use crate::layers::Activation;
 use crate::layers::Convolution;
 use crate::layers::FullyConnected;
 use crate::layers::Pool;
-use crate::initialisation::InitialisationOptions;
 
 pub trait Convolvable {
     fn shape(&self) -> (usize, usize);
@@ -54,7 +53,7 @@ pub trait Forward {
 }
 
 #[derive(Debug)]
-#[enum_dispatch(Forward)]
+#[enum_dispatch(Forward, Initialisable)]
 pub enum Layer {
     FC(FullyConnected),
     CONV(Convolution),
@@ -86,29 +85,6 @@ impl From<DMatrix<f32>> for Mat {
         }
     }
 }
-//
-// impl Deref for Mat {
-//     type Target = DVector<f32>;
-//     fn deref(&self) -> &Self::Target {
-//         &self.data
-//     }
-// }
-//
-// impl DerefMut for Mat {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         &mut self.data
-//     }
-// }
-//
-// impl IntoIterator for Mat  {
-//     type Item = f32;
-//     type IntoIter = std::vec::IntoIter<Self::Item>;
-//
-//     fn into_iter(self) -> Self::IntoIter {
-//         let as_vec: Vec<f32> = self.data.into_iter().copied().collect();
-//         as_vec.into_iter()
-//     }
-// }
 
 #[cfg(test)]
 mod tests {

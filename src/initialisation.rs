@@ -1,3 +1,5 @@
+use enum_dispatch::enum_dispatch;
+
 #[derive(Default, Debug)]
 pub enum InitialisationOptions {
     Random,
@@ -5,6 +7,7 @@ pub enum InitialisationOptions {
     He,
 }
 
+#[enum_dispatch]
 pub trait Initialisable {
     fn initialise(self, previous_shape: (usize, usize)) -> Self; 
 }
