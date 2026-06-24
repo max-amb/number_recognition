@@ -9,5 +9,5 @@ pub enum InitialisationOptions {
 
 #[enum_dispatch]
 pub trait Initialisable {
-    fn initialise(self, previous_shape: (usize, usize)) -> Self; 
+    fn initialise(&mut self, previous_shape: (usize, usize)) -> (usize, usize);
 }

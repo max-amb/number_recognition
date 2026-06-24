@@ -6,6 +6,8 @@ use crate::layers::Convolution;
 use crate::layers::FullyConnected;
 use crate::layers::Pool;
 
+use crate::initialisation::Initialisable;
+
 pub trait Convolvable {
     fn shape(&self) -> (usize, usize);
     fn zero_padding(&self) -> usize;

@@ -23,8 +23,8 @@ impl Forward for Activation {
 }
 
 impl Initialisable for Activation {
-    fn initialise(self, _previous_shape: (usize, usize)) -> Self {
-        self 
+    fn initialise(&mut self, previous_shape: (usize, usize)) -> (usize, usize) {
+        previous_shape
     }
 }
 

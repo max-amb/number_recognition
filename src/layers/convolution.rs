@@ -20,9 +20,9 @@ impl Kernel {
 }
 
 impl Initialisable for Kernel {
-    fn initialise(self, _previous_shape: (usize, usize)) -> Self {
-        self       
-    } 
+    fn initialise(&mut self, previous_shape: (usize,usize)) -> (usize,usize) {
+        out_shape(previous_shape, self)
+    }
 }
 
 impl Convolvable for Kernel {
@@ -46,8 +46,8 @@ pub struct Convolution {
 }
 
 impl Initialisable for Convolution {
-    fn initialise(self, _previous_shape: (usize, usize)) -> Self {
-        self 
+    fn initialise(&mut self, previous_shape: (usize, usize)) -> (usize, usize) {
+        self.filter.initialise(previous_shape)
     } 
 }
 

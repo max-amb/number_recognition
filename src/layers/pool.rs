@@ -19,8 +19,8 @@ impl Pool {
 }
 
 impl Initialisable for Pool {
-    fn initialise(self, _previous_shape: (usize, usize)) -> Self {
-        self     
+    fn initialise(&mut self, previous_shape: (usize, usize)) -> (usize, usize) {
+        out_shape(previous_shape, self)
     } 
 }
 

@@ -31,10 +31,10 @@ impl Forward for FullyConnected {
 }
 
 impl Initialisable for FullyConnected {
-    fn initialise(self, previous_shape: (usize, usize)) -> Self {
+    fn initialise(&mut self, previous_shape: (usize, usize)) -> (usize, usize) {
         let mut rng = rand::rng();
 
-        let weights = Some(match &self.initialisation_options {
+        self.weights = Some(match &self.initialisation_options {
             InitialisationOptions::Random => {
                 DMatrix::from_fn(
                     self.output_shape.0 * self.output_shape.1,
@@ -54,7 +54,7 @@ impl Initialisable for FullyConnected {
             }
         });
 
-        let biases= Some(DVector::from_element(self.output_shape.0*self.output_shape.1, 0.0));
-        Self { output_shape: self.output_shape, weights, biases, initialisation_options: self.initialisation_options }
+        self.biases = Some(DVector::from_element(self.output_shape.0*self.output_shape.1, 0.0));
+        self.output_shape
     }
 }
