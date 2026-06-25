@@ -6,7 +6,7 @@ use crate::layers::Convolution;
 use crate::layers::FullyConnected;
 use crate::layers::Pool;
 
-use crate::initialisation::Initialisable;
+use crate::tensor::{Shape, Ten};
 
 pub trait Convolvable {
     fn shape(&self) -> (usize, usize);
@@ -14,15 +14,12 @@ pub trait Convolvable {
     fn stride(&self) -> usize;
 }
 
-pub fn im2col(m: Mat, conv: &dyn Convolvable) -> DMatrix<f32> {
+pub fn im2col(m: Ten, conv: &dyn Convolvable) -> DMatrix<f32> {
     let v: DVector<f32> = m.data;
-    let (nrows, ncols) = m.shape;
+    m.shape.flat_shape();
     let (krows, kcols) = conv.shape();
     assert!(krows <= nrows + conv.zero_padding() && kcols <= ncols + conv.zero_padding());
-    let out_rows = krows * kcols;
-    let out_cols = (((nrows + conv.zero_padding()) - krows + 1)
-        * ((ncols + conv.zero_padding()) - kcols + 1))
-        / conv.stride();
+    let (out_rows, out_cols) = out_shape(in_shape, conv);
 
     let reshaped: DMatrix<f32> = v.reshape_generic(Dyn(nrows), Dyn(ncols)).resize(
         nrows + conv.zero_padding(),
@@ -51,7 +48,12 @@ pub fn out_shape(in_shape: (usize, usize), conv: &dyn Convolvable) -> (usize, us
 
 #[enum_dispatch]
 pub trait Forward {
-    fn run(&self, prev_layer: Mat) -> Mat;
+    fn run(&self, prev_layer: Ten) -> Ten;
+}
+
+#[enum_dispatch]
+pub trait Initialisable {
+    fn initialise(&mut self, previous_shape: Shape) -> Shape;
 }
 
 #[derive(Debug)]
@@ -61,31 +63,6 @@ pub enum Layer {
     CONV(Convolution),
     POOL(Pool),
     ACTIVATION(Activation),
-}
-
-pub struct Mat {
-    pub data: DVector<f32>,
-    pub shape: (usize, usize),
-}
-
-impl Mat {
-    pub fn fmap(self, function: impl Fn(DVector<f32>) -> DVector<f32>) -> Self {
-        let new_data = function(self.data);
-        assert_eq!(new_data.shape(), self.shape);
-        Self {
-            data: new_data,
-            shape: self.shape,
-        }
-    }
-}
-
-impl From<DMatrix<f32>> for Mat {
-    fn from(mat: DMatrix<f32>) -> Self {
-        Self {
-            data: DVector::from_vec(mat.into_iter().copied().collect()),
-            shape: mat.shape(),
-        }
-    }
 }
 
 #[cfg(test)]
@@ -104,9 +81,9 @@ mod tests {
         assert_eq!(n_rows * n_cols, vec.len());
 
         let dmat: DMatrix<f32> = DMatrix::from_vec(n_rows, n_cols, vec.clone());
-        let mat: Mat = Mat::from(dmat);
+        let mat: Ten = Ten::from(dmat);
 
         assert_eq!(mat.data, DVector::from_vec(vec));
-        assert_eq!(mat.shape, (n_rows, n_cols));
+        assert_eq!(mat.shape, (n_rows, n_cols).into());
     }
 }
