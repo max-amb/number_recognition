@@ -1,7 +1,6 @@
 use nalgebra::DVector;
 
-use crate::layers::{Forward, Mat};
-use crate::initialisation::Initialisable;
+use crate::layers::{Forward, Initialisable, Mat};
 
 #[derive(Debug)]
 pub enum Activation {
@@ -12,8 +11,8 @@ pub enum Activation {
 }
 
 impl Forward for Activation {
-    fn run(&self, layer: Mat) -> Mat {
-        layer.fmap(|val| match self {
+    fn run(&self, prev_layer: Mat) -> Mat {
+        prev_layer.fmap(|val| match self {
             Activation::Sigmoid => sigmoid(val),
             Activation::Relu => relu(val),
             Activation::LeakyRelu { alpha } => leaky_relu(val, *alpha),
@@ -48,17 +47,9 @@ fn relu(layer: DVector<f32>) -> DVector<f32> {
 }
 
 pub fn leaky_relu_derivative(input: f32, alpha: f32) -> f32 {
-    if input.lt(&0.0) {
-        alpha
-    } else {
-        1.0
-    }
+    if input.lt(&0.0) { alpha } else { 1.0 }
 }
 
 pub fn relu_derivative(input: f32) -> f32 {
-    if input.lt(&0.0) {
-        0.0
-    } else {
-        1.0
-    }
+    if input.lt(&0.0) { 0.0 } else { 1.0 }
 }

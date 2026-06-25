@@ -7,32 +7,33 @@ use std::sync::{Arc, mpsc};
 use std::thread;
 
 use crate::cost::CostFunction;
+use crate::layers::{Forward, Initialisable, Layer, Mat};
 use crate::optimisation_algos::{Optimisation, OptimisationAlgorithms};
 use crate::training_data::TrainingData;
-use crate::layers::{Forward, Layer, Mat};
-use crate::initialisation::Initialisable;
 
 #[derive(Debug)]
 pub struct NN {
     layers: Vec<Layer>,
-    cost_function: CostFunction
+    cost_function: CostFunction,
 }
 
 impl NN {
     pub fn new(
         mut layers: Vec<Layer>,
         input_shape: (usize, usize),
-        cost_function: CostFunction
+        cost_function: CostFunction,
     ) -> NN {
         let mut curr_shape = input_shape;
-        layers.iter_mut().for_each(|x| curr_shape = x.initialise(curr_shape));
-        NN { layers, cost_function }
+        layers
+            .iter_mut()
+            .for_each(|x| curr_shape = x.initialise(curr_shape));
+        NN {
+            layers,
+            cost_function,
+        }
     }
 
-    pub fn forward_pass(
-        network: &NN,
-        input: Mat,
-    ) -> Vec<Mat> {
+    pub fn forward_pass(network: &NN, input: Mat) -> Vec<Mat> {
         let mut new_layers: Vec<Mat> = Vec::new();
         let mut curr_inp = input.clone();
         for layer in &network.layers {
@@ -353,7 +354,7 @@ impl NN {
                 }
             }
             iterator_over_cycles += cycle_size;
-        } 
+        }
 
         ctrlc_reciever
             .recv()
@@ -420,7 +421,6 @@ impl NN {
                     .iter_mut()
                     .enumerate()
                     .for_each(|(i, x)| *x += &delta_weights[i]);
-
             }
 
             let changes_to_apply: (Vec<DMatrix<f32>>, Vec<DVector<f32>>) =

@@ -1,9 +1,8 @@
 use nalgebra::DVector;
 
 use crate::layers::primitives::{im2col, out_shape};
-use crate::layers::{Convolvable, Forward, Mat};
-
-use crate::initialisation::Initialisable;
+use crate::layers::{Convolvable, Forward, Initialisable};
+use crate::tensor::{Shape, Ten};
 
 #[derive(Debug)]
 pub struct Pool {
@@ -13,20 +12,28 @@ pub struct Pool {
 }
 
 impl Pool {
-    fn new(shape: (usize, usize), stride: usize, pooling_function: fn(DVector<f32>) -> f32) -> Self {
-        Self { shape, stride, pooling_function }
-    } 
+    fn new(
+        shape: (usize, usize),
+        stride: usize,
+        pooling_function: fn(DVector<f32>) -> f32,
+    ) -> Self {
+        Self {
+            shape,
+            stride,
+            pooling_function,
+        }
+    }
 }
 
 impl Initialisable for Pool {
-    fn initialise(&mut self, previous_shape: (usize, usize)) -> (usize, usize) {
-        out_shape(previous_shape, self)
-    } 
+    fn initialise(&mut self, previous_shape: Shape) -> Shape {
+        out_shape(previous_shape, self, 1)
+    }
 }
 
 impl Convolvable for Pool {
-    fn shape(&self) -> (usize, usize) {
-        self.shape
+    fn shape(&self) -> Shape {
+        self.shape.into()
     }
 
     fn zero_padding(&self) -> usize {

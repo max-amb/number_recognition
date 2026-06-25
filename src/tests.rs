@@ -1,7 +1,7 @@
 #[cfg(test)]
 pub mod test {
-    use crate::neural_network::{InitialisationOptions, NN};
     use crate::cost::CostFunction;
+    use crate::neural_network::{InitialisationOptions, NN};
     use float_cmp::assert_approx_eq;
     use nalgebra::{DMatrix, DVector};
     fn create_nn_for_test() -> (NN, DVector<f32>, DVector<f32>) {

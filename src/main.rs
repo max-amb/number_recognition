@@ -1,16 +1,16 @@
 #![allow(unused_imports)]
 use std::io;
 
-pub mod activation_functions;
 pub mod neural_network;
 pub mod optimisation_algos;
 pub mod tests;
 pub mod training_data;
-pub mod primitives;
 pub mod cost;
 pub mod layers;
+pub mod initialisation;
 
-use neural_network::{InitialisationOptions, NN};
+use neural_network::NN;
+use initialisation::InitialisationOptions;
 use cost::CostFunction;
 use optimisation_algos::OptimisationAlgorithms;
 use std::sync::mpsc;
@@ -24,7 +24,8 @@ fn main() {
     );
 
     // let mut network: NN = NN::generate_model_from_file("/home/max/Documents/model.txt").unwrap();
-    let mut network: NN = NN::new(&[784, 512, 256, 10], InitialisationOptions::He, None);
+    // let mut network: NN = NN::new(&[784, 512, 256, 10], InitialisationOptions::He, None);
+    let mut net: NN = NN::new(vec![])
 
     network = NN::training(
         network,

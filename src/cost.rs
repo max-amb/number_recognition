@@ -2,7 +2,8 @@ use nalgebra::DVector;
 
 #[derive(Debug)]
 pub enum CostFunction {
-    Quadratic, CategoricalCrossEntropy,
+    Quadratic,
+    CategoricalCrossEntropy,
 }
 
 impl CostFunction {

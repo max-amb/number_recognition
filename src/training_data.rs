@@ -8,7 +8,11 @@ pub struct TrainingData {
 }
 
 impl TrainingData {
-    pub fn new(file_path_of_labels: &str, file_path_of_images: &str, size_of_data: usize) -> TrainingData {
+    pub fn new(
+        file_path_of_labels: &str,
+        file_path_of_images: &str,
+        size_of_data: usize,
+    ) -> TrainingData {
         let training = TrainingData {
             data: TrainingData::read_images(file_path_of_images, size_of_data).unwrap(),
             labels: TrainingData::read_labels(file_path_of_labels, size_of_data).unwrap(),
@@ -17,7 +21,10 @@ impl TrainingData {
         training
     }
 
-    pub fn read_images(file_path_of_images: &str, size_of_data: usize) -> Result<Vec<DVector<f32>>, std::io::Error> {
+    pub fn read_images(
+        file_path_of_images: &str,
+        size_of_data: usize,
+    ) -> Result<Vec<DVector<f32>>, std::io::Error> {
         let f = File::open(file_path_of_images)?;
         let mut reader = BufReader::with_capacity(4, f);
         let mut buffer = [0; 4];
@@ -69,7 +76,10 @@ impl TrainingData {
         Ok(images)
     }
 
-    pub fn read_labels(file_path_of_labels: &str, size_of_data: usize) -> Result<Vec<DVector<f32>>, std::io::Error> {
+    pub fn read_labels(
+        file_path_of_labels: &str,
+        size_of_data: usize,
+    ) -> Result<Vec<DVector<f32>>, std::io::Error> {
         let f = File::open(file_path_of_labels)?;
         let mut reader = BufReader::with_capacity(4, f);
         let mut buffer = [0; 4];

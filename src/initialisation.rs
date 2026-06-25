@@ -16,17 +16,16 @@ impl InitialisationOptions {
         let mut rng = rand::rng();
 
         match self {
-            InitialisationOptions::Random => {
-                Ten { data: DVector::from_fn(shape.magnitude(),|_, _| rng.random_range(-1.0..=1.0)), shape } 
-            }
+            InitialisationOptions::Random => Ten {
+                data: DVector::from_fn(shape.magnitude(), |_, _| rng.random_range(-1.0..=1.0)),
+                shape,
+            },
             InitialisationOptions::He => {
                 let normal_dist = Normal::new(0.0, (2.0_f32 / ((fan_in) as f32)).sqrt()).unwrap();
-                Ten { data: DVector::from_fn(
-                    shape.magnitude(),
-                    |_, _| {
-                        normal_dist.sample(&mut rng)
-                    }
-                ), shape }
+                Ten {
+                    data: DVector::from_fn(shape.magnitude(), |_, _| normal_dist.sample(&mut rng)),
+                    shape,
+                }
             }
         }
     }

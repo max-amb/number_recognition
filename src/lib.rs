@@ -1,8 +1,8 @@
-pub mod neural_network;
+pub mod cost;
 pub mod initialisation;
+pub mod layers;
+pub mod neural_network;
 pub mod optimisation_algos;
+pub mod tensor;
 pub mod tests;
 pub mod training_data;
-pub mod cost;
-pub mod layers;
-pub mod tensor;
