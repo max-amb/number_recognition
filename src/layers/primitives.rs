@@ -1,5 +1,5 @@
-use nalgebra::{DMatrix, DVector, Dyn};
 use enum_dispatch::enum_dispatch;
+use nalgebra::{DMatrix, DVector, Dyn};
 
 use crate::layers::Activation;
 use crate::layers::Convolution;
@@ -9,41 +9,51 @@ use crate::layers::Pool;
 use crate::tensor::{Shape, Ten};
 
 pub trait Convolvable {
-    fn shape(&self) -> (usize, usize);
+    fn shape(&self) -> Shape;
     fn zero_padding(&self) -> usize;
     fn stride(&self) -> usize;
+    fn out_depth(&self) -> usize;
 }
 
 pub fn im2col(m: Ten, conv: &dyn Convolvable) -> DMatrix<f32> {
-    let v: DVector<f32> = m.data;
-    m.shape.flat_shape();
-    let (krows, kcols) = conv.shape();
-    assert!(krows <= nrows + conv.zero_padding() && kcols <= ncols + conv.zero_padding());
-    let (out_rows, out_cols) = out_shape(in_shape, conv);
+    let outshape = out_shape(m.shape, conv);
+    let (nrows, ncols) = m.shape.flat_shape();
+    let (krows, kcols) = conv.shape().flat_shape();
+    let jump_size = nrows * ncols;
 
-    let reshaped: DMatrix<f32> = v.reshape_generic(Dyn(nrows), Dyn(ncols)).resize(
-        nrows + conv.zero_padding(),
-        ncols + conv.zero_padding(),
-        0.0,
-    );
-
-    let mut columns = Vec::with_capacity(out_rows * out_cols);
+    let mut columns = Vec::with_capacity(outshape.magnitude());
+    let reshaped_mats = Vec::from_iter((0..m.shape.magnitude()).step_by(jump_size).map(|x| {
+        m.data
+            .view((x, 0), (x + jump_size, 1))
+            .reshape_generic(Dyn(nrows), Dyn(ncols))
+            .resize(
+                nrows + conv.zero_padding(),
+                ncols + conv.zero_padding(),
+                0.0,
+            )
+    }));
 
     for i in (0..=((nrows + conv.zero_padding()) - krows)).step_by(conv.stride()) {
         for j in (0..=((ncols + conv.zero_padding()) - kcols)).step_by(conv.stride()) {
-            let patch = reshaped.view((i, j), (krows, kcols));
-            columns.extend(patch.into_iter().copied());
+            columns.extend(
+                (0..conv.out_depth())
+                    .map(|x| &reshaped_mats[x])
+                    .map(|m| m.view((i, j), (krows, kcols)).into_iter().copied())
+                    .flatten(),
+            );
         }
     }
-    DMatrix::from_vec(out_rows, out_cols, columns)
+    DMatrix::from_vec(krows*kcols*conv.out_depth(), outshape.nrows * outshape.ncols, columns)
 }
 
-pub fn out_shape(in_shape: (usize, usize), conv: &dyn Convolvable) -> (usize, usize) {
-    let (nrows, ncols) = in_shape;
-    let (crows, ccols) = conv.shape();
-    let new_nrows = ((nrows + conv.zero_padding()) - crows) / conv.stride();
-    let new_ncols = ((ncols + conv.zero_padding()) - ccols) / conv.stride();
-    (new_nrows, new_ncols)
+pub fn out_shape(in_shape: Shape, conv: &dyn Convolvable) -> Shape {
+    assert!(
+        conv.shape().nrows <= in_shape.nrows + conv.zero_padding()
+            && conv.shape().ncols <= in_shape.ncols + conv.zero_padding()
+    );
+    let new_nrows = ((in_shape.nrows + conv.zero_padding()) - conv.shape().nrows) / conv.stride();
+    let new_ncols = ((in_shape.ncols + conv.zero_padding()) - conv.shape().ncols) / conv.stride();
+    (new_nrows, new_ncols, conv.out_depth()).into()
 }
 
 #[enum_dispatch]
@@ -68,9 +78,9 @@ pub enum Layer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hegel::generators as gs;
     use hegel::Generator;
     use hegel::TestCase;
+    use hegel::generators as gs;
 
     #[hegel::test]
     fn test_dmatrix_to_matrix(tc: TestCase) {
