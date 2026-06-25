@@ -1,33 +1,46 @@
-use nalgebra::{Const, DMatrix, Dyn, DVector};
+use nalgebra::{Const, DMatrix, Dyn};
 
-use crate::layers::primitives::{im2col, out_shape};
-use crate::layers::{Convolvable, Forward, Mat};
-
-use crate::initialisation::Initialisable;
+use crate::initialisation::InitialisationOptions;
+use crate::layers::primitives::{out_shape, im2col};
+use crate::layers::{Convolvable, Forward, Initialisable};
+use crate::tensor::{Shape, Ten};
 
 #[derive(Debug)]
 pub struct Kernel {
-    pub kernel: DMatrix<f32>,
+    pub kernel: Option<Ten>,
     pub bias: f32,
-    pub stride: usize,
-    pub zero_padding: usize,
+    shape: (usize, usize),
 }
 
 impl Kernel {
-    fn new(kernel: DMatrix<f32>, stride: usize, zero_padding: usize) -> Self {
-        Self { kernel, bias: 0.0, stride, zero_padding }
+    fn new(shape: (usize, usize)) -> Self {
+        Self {
+            kernel: None,
+            bias: 0.0,
+            shape,
+        }
+    }
+
+    fn initialise(&mut self, previous_shape: Shape, initialisation_options: InitialisationOptions) {
+        self.kernel = Some(initialisation_options.create_matrix(
+            (self.shape.0, self.shape.1, previous_shape.channels).into(),
+            previous_shape.magnitude(),
+        ));
     }
 }
 
-impl Initialisable for Kernel {
-    fn initialise(&mut self, previous_shape: (usize,usize)) -> (usize,usize) {
-        out_shape(previous_shape, self)
-    }
+#[derive(Debug)]
+pub struct Convolution {
+    kernels: Vec<Kernel>,
+    stride: usize,
+    zero_padding: usize,
+    initialisation_options: InitialisationOptions,
+    shape: (usize, usize),
 }
 
-impl Convolvable for Kernel {
-    fn shape(&self) -> (usize, usize) {
-        self.kernel.shape()
+impl Convolvable for Convolution {
+    fn shape(&self) -> Shape {
+        self.shape.into()
     }
 
     fn stride(&self) -> usize {
@@ -37,46 +50,61 @@ impl Convolvable for Kernel {
     fn zero_padding(&self) -> usize {
         self.zero_padding
     }
-}
 
-// Begin with a single kernel, extend later
-#[derive(Debug)]
-pub struct Convolution {
-    filter: Kernel,
+    fn out_depth(&self) -> usize {
+        self.kernels.len()
+    }
 }
 
 impl Initialisable for Convolution {
-    fn initialise(&mut self, previous_shape: (usize, usize)) -> (usize, usize) {
-        self.filter.initialise(previous_shape)
-    } 
+    fn initialise(&mut self, previous_shape: Shape) -> Shape {
+        for kern in &mut self.kernels {
+            kern.initialise(previous_shape, self.initialisation_options);
+        }
+        (self.shape.0, self.shape.1, self.kernels.len()).into()
+    }
 }
 
 impl Convolution {
-    fn new(kern: Kernel) -> Self {
-        Self { filter: kern }
-    }
-
-    fn from_kernel(kernel: DMatrix<f32>, stride: usize, zero_padding: usize) -> Self {
-        Self { filter: Kernel::new(kernel, stride, zero_padding)  }
+    fn new(
+        num_of_kernels: usize,
+        shape: (usize, usize),
+        stride: usize,
+        zero_padding: usize,
+        initialisation_options: InitialisationOptions,
+    ) -> Self {
+        Self {
+            kernels: Vec::from_iter((0..num_of_kernels).map(|_| Kernel::new(shape))),
+            stride,
+            zero_padding,
+            initialisation_options,
+            shape,
+        }
     }
 }
 
 impl Forward for Convolution {
-    fn run(&self, prev_layer: Mat) -> Mat {
-        let kern = &self.filter;
-        let (new_nrows, new_ncols) = out_shape(prev_layer.shape, kern);
+    fn run(&self, prev_layer: Ten) -> Ten {
+        let outshape = out_shape(prev_layer.shape, self);
+        let previous_layers_channels = prev_layer.shape.channels;
 
-        let prev_columnised = im2col(prev_layer, kern);
-        // Cloning kernel isn't horrific, should be somewhat small
-        let flattened_kernel = kern
-            .kernel
-            .clone()
-            .reshape_generic(Dyn(1), Dyn(kern.kernel.shape().0 * kern.kernel.shape().1));
-        let res = (flattened_kernel * prev_columnised)
-            .reshape_generic(Dyn(new_nrows * new_ncols), Const::<1>);
-        Mat {
-            data: res+DVector::from_element(new_nrows*new_ncols, self.filter.bias),
-            shape: (new_nrows, new_ncols),
+        let prev_columnised = im2col(prev_layer, self);
+        let mut rows_of_kernels: Vec<f32> = Vec::with_capacity(self.shape.0 * self.shape.1 * self.kernels.len());
+
+        for kern in &self.kernels {
+            rows_of_kernels.extend(kern
+                .kernel
+                .as_ref()
+                .unwrap().data.into_iter().copied());
+        }
+
+        let matrix_of_kernels = DMatrix::from_row_iterator(self.kernels.len(), self.shape.0 * self.shape.1 * previous_layers_channels, rows_of_kernels.into_iter());
+        let biases_mat: DMatrix<f32> = DMatrix::from_iterator(self.kernels.len(), prev_columnised.shape().1, (0..self.kernels.len()).map(|x| self.kernels[x].bias).cycle().take(self.kernels.len()*prev_columnised.shape().1));
+        let res = ((matrix_of_kernels * &prev_columnised)+biases_mat)
+            .reshape_generic(Dyn(self.kernels.len()*prev_columnised.shape().1), Const::<1>);
+        Ten {
+            data: res,
+            shape: outshape 
         }
     }
 }
