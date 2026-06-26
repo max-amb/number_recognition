@@ -90,7 +90,7 @@ impl Forward for Convolution {
 
         let prev_columnised = im2col(prev_layer, self);
         let mut rows_of_kernels: Vec<f32> =
-            Vec::with_capacity(self.shape.0 * self.shape.1 * self.kernels.len());
+            Vec::with_capacity(self.shape.0 * self.shape.1 * self.kernels.len() * previous_layers_channels);
 
         for kern in &self.kernels {
             rows_of_kernels.extend(kern.kernel.as_ref().unwrap().data.into_iter().copied());
@@ -109,7 +109,7 @@ impl Forward for Convolution {
                 .cycle()
                 .take(self.kernels.len() * prev_columnised.ncols()),
         );
-        let res = ((matrix_of_kernels * &prev_columnised) + biases_mat).reshape_generic(
+        let res = ((matrix_of_kernels * &prev_columnised) + biases_mat).transpose().reshape_generic(
             Dyn(self.kernels.len() * prev_columnised.ncols()),
             Const::<1>,
         );
