@@ -1,4 +1,4 @@
-use nalgebra::DVector;
+use nalgebra::{Const, DVector, Dyn};
 
 use crate::layers::primitives::{im2col, out_shape};
 use crate::layers::{Convolvable, Forward, Initialisable};
@@ -9,6 +9,7 @@ pub struct Pool {
     shape: (usize, usize),
     stride: usize,
     pooling_function: fn(DVector<f32>) -> f32,
+    output_depth: Option<usize>
 }
 
 impl Pool {
@@ -21,17 +22,23 @@ impl Pool {
             shape,
             stride,
             pooling_function,
+            output_depth: None
         }
     }
 }
 
 impl Initialisable for Pool {
     fn initialise(&mut self, previous_shape: Shape) -> Shape {
-        out_shape(previous_shape, self, 1)
+        self.output_depth = Some(previous_shape.channels);
+        out_shape(previous_shape, self)
     }
 }
 
 impl Convolvable for Pool {
+    fn out_depth(&self) -> usize {
+        self.output_depth.unwrap()
+    }
+
     fn shape(&self) -> Shape {
         self.shape.into()
     }
@@ -46,16 +53,25 @@ impl Convolvable for Pool {
 }
 
 impl Forward for Pool {
-    fn run(&self, prev_layer: Mat) -> Mat {
-        let shape = out_shape(prev_layer.shape, self);
+    fn run(&self, prev_layer: Ten) -> Ten {
+        let outshape = out_shape(prev_layer.shape, self);
+        let size_of_view= self.shape.0 * self.shape.1;
         let prev_columnised = im2col(prev_layer, self);
-        let mut result: Vec<f32> = Vec::with_capacity(prev_columnised.ncols());
-        for col in prev_columnised.column_iter() {
-            result.push((self.pooling_function)(col.into()));
+        let mut result: Vec<f32> = Vec::with_capacity(outshape.magnitude());
+        /*
+        for _ in 0..outshape.channels {
+            result.push(Vec::with_capacity(outshape.nrows * outshape.ncols));
+        }*/
+
+        for i in 0..outshape.channels {
+            let channel_block = prev_columnised.rows(i*size_of_view, size_of_view);
+            for col in channel_block.column_iter() {
+                result.push((self.pooling_function)(col.into()));
+            }
         }
-        Mat {
+        Ten {
             data: DVector::from_vec(result),
-            shape,
+            shape: outshape,
         }
     }
 }
