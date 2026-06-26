@@ -1,6 +1,7 @@
 use nalgebra::DVector;
 
-use crate::layers::{Forward, Initialisable, Mat};
+use crate::layers::{Forward, Initialisable};
+use crate::tensor::{Ten, Shape};
 
 #[derive(Debug)]
 pub enum Activation {
@@ -11,7 +12,7 @@ pub enum Activation {
 }
 
 impl Forward for Activation {
-    fn run(&self, prev_layer: Mat) -> Mat {
+    fn run(&self, prev_layer: Ten) -> Ten {
         prev_layer.fmap(|val| match self {
             Activation::Sigmoid => sigmoid(val),
             Activation::Relu => relu(val),
@@ -22,7 +23,7 @@ impl Forward for Activation {
 }
 
 impl Initialisable for Activation {
-    fn initialise(&mut self, previous_shape: (usize, usize)) -> (usize, usize) {
+    fn initialise(&mut self, previous_shape: Shape) -> Shape {
         previous_shape
     }
 }
