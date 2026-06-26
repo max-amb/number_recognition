@@ -1,3 +1,4 @@
+#[allow(unused_imports)]
 use nalgebra::{DMatrix, DVector};
 use rand::Rng;
 use rand_distr::{Distribution, Normal};
@@ -7,20 +8,21 @@ use std::sync::{Arc, mpsc};
 use std::thread;
 
 use crate::cost::CostFunction;
-use crate::layers::{Forward, Initialisable, Layer, Mat};
+use crate::layers::{Forward, Initialisable, Layer};
 use crate::optimisation_algos::{Optimisation, OptimisationAlgorithms};
 use crate::training_data::TrainingData;
+use crate::tensor::{Shape, Ten};
 
 #[derive(Debug)]
 pub struct NN {
-    layers: Vec<Layer>,
-    cost_function: CostFunction,
+    pub layers: Vec<Layer>,
+    pub cost_function: CostFunction,
 }
 
 impl NN {
     pub fn new(
         mut layers: Vec<Layer>,
-        input_shape: (usize, usize),
+        input_shape: Shape,
         cost_function: CostFunction,
     ) -> NN {
         let mut curr_shape = input_shape;
@@ -33,8 +35,8 @@ impl NN {
         }
     }
 
-    pub fn forward_pass(network: &NN, input: Mat) -> Vec<Mat> {
-        let mut new_layers: Vec<Mat> = Vec::new();
+    pub fn forward_pass(network: &NN, input: Ten) -> Vec<Ten> {
+        let mut new_layers: Vec<Ten> = Vec::new();
         let mut curr_inp = input.clone();
         for layer in &network.layers {
             let new_inp = layer.run(curr_inp);
@@ -44,6 +46,7 @@ impl NN {
         new_layers
     }
 
+    /*
     pub fn backprop(
         network: &NN,
         expected_result: &DVector<f32>,
@@ -469,4 +472,5 @@ impl NN {
         }
         correct
     }
+    */
 }

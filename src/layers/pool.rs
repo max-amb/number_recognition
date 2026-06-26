@@ -58,10 +58,6 @@ impl Forward for Pool {
         let size_of_view= self.shape.0 * self.shape.1;
         let prev_columnised = im2col(prev_layer, self);
         let mut result: Vec<f32> = Vec::with_capacity(outshape.magnitude());
-        /*
-        for _ in 0..outshape.channels {
-            result.push(Vec::with_capacity(outshape.nrows * outshape.ncols));
-        }*/
 
         for i in 0..outshape.channels {
             let channel_block = prev_columnised.rows(i*size_of_view, size_of_view);

@@ -3,11 +3,11 @@ use std::io;
 
 pub mod neural_network;
 pub mod optimisation_algos;
-pub mod tests;
 pub mod training_data;
 pub mod cost;
 pub mod layers;
 pub mod initialisation;
+pub mod tensor;
 
 use neural_network::NN;
 use initialisation::InitialisationOptions;
@@ -25,8 +25,8 @@ fn main() {
 
     // let mut network: NN = NN::generate_model_from_file("/home/max/Documents/model.txt").unwrap();
     // let mut network: NN = NN::new(&[784, 512, 256, 10], InitialisationOptions::He, None);
-    let mut net: NN = NN::new(vec![])
 
+    /*
     network = NN::training(
         network,
         512,
@@ -37,10 +37,11 @@ fn main() {
         0.8,
         64,
     );
-    NN::output_model_to_file(&network, "/home/max/Documents/model.txt").unwrap();
+    NN::output_model_to_file(&network, "/home/max/Documents/model.txt").unwrap();*/
     // input_bmps(&mut network, &CostFunction::CategoricalCrossEntropy);
 }
 
+/*
 #[allow(dead_code)]
 fn input_bmps(network: &mut NN, cost_function: &CostFunction) {
     let (ctrlc_transmitter, ctrlc_reciever) = mpsc::channel();
@@ -79,4 +80,4 @@ fn input_bmps(network: &mut NN, cost_function: &CostFunction) {
         "/home/max/projects/number_recognition/models/tmp.txt",
     )
     .unwrap();
-}
+}*/
