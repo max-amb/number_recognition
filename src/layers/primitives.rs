@@ -33,8 +33,8 @@ pub fn im2col(m: Ten, conv: &dyn Convolvable) -> DMatrix<f32> {
             )
     }));
 
-    for i in (0..=((nrows + conv.zero_padding()) - krows)).step_by(conv.stride()) {
-        for j in (0..=((ncols + conv.zero_padding()) - kcols)).step_by(conv.stride()) {
+    for j in (0..=((ncols + conv.zero_padding()) - kcols)).step_by(conv.stride()) {
+        for i in (0..=((nrows + conv.zero_padding()) - krows)).step_by(conv.stride()) {
             columns.extend(
                 (0..conv.out_depth())
                     .map(|x| &reshaped_mats[x])
@@ -43,7 +43,11 @@ pub fn im2col(m: Ten, conv: &dyn Convolvable) -> DMatrix<f32> {
             );
         }
     }
-    DMatrix::from_vec(krows*kcols*conv.out_depth(), outshape.nrows * outshape.ncols, columns)
+    DMatrix::from_vec(
+        krows * kcols * conv.out_depth(),
+        outshape.nrows * outshape.ncols,
+        columns,
+    )
 }
 
 pub fn out_shape(in_shape: Shape, conv: &dyn Convolvable) -> Shape {
