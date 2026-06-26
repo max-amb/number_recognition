@@ -1,7 +1,7 @@
 use nalgebra::{Const, DMatrix, Dyn};
 
 use crate::initialisation::InitialisationOptions;
-use crate::layers::primitives::{out_shape, im2col};
+use crate::layers::primitives::{im2col, out_shape};
 use crate::layers::{Convolvable, Forward, Initialisable};
 use crate::tensor::{Shape, Ten};
 
@@ -89,22 +89,33 @@ impl Forward for Convolution {
         let previous_layers_channels = prev_layer.shape.channels;
 
         let prev_columnised = im2col(prev_layer, self);
-        let mut rows_of_kernels: Vec<f32> = Vec::with_capacity(self.shape.0 * self.shape.1 * self.kernels.len());
+        let mut rows_of_kernels: Vec<f32> =
+            Vec::with_capacity(self.shape.0 * self.shape.1 * self.kernels.len());
 
         for kern in &self.kernels {
-            rows_of_kernels.extend(kern
-                .kernel
-                .as_ref()
-                .unwrap().data.into_iter().copied());
+            rows_of_kernels.extend(kern.kernel.as_ref().unwrap().data.into_iter().copied());
         }
 
-        let matrix_of_kernels = DMatrix::from_row_iterator(self.kernels.len(), self.shape.0 * self.shape.1 * previous_layers_channels, rows_of_kernels.into_iter());
-        let biases_mat: DMatrix<f32> = DMatrix::from_iterator(self.kernels.len(), prev_columnised.shape().1, (0..self.kernels.len()).map(|x| self.kernels[x].bias).cycle().take(self.kernels.len()*prev_columnised.shape().1));
-        let res = ((matrix_of_kernels * &prev_columnised)+biases_mat)
-            .reshape_generic(Dyn(self.kernels.len()*prev_columnised.shape().1), Const::<1>);
+        let matrix_of_kernels = DMatrix::from_row_iterator(
+            self.kernels.len(),
+            self.shape.0 * self.shape.1 * previous_layers_channels,
+            rows_of_kernels.into_iter(),
+        );
+        let biases_mat: DMatrix<f32> = DMatrix::from_iterator(
+            self.kernels.len(),
+            prev_columnised.ncols(),
+            (0..self.kernels.len())
+                .map(|x| self.kernels[x].bias)
+                .cycle()
+                .take(self.kernels.len() * prev_columnised.ncols()),
+        );
+        let res = ((matrix_of_kernels * &prev_columnised) + biases_mat).reshape_generic(
+            Dyn(self.kernels.len() * prev_columnised.ncols()),
+            Const::<1>,
+        );
         Ten {
             data: res,
-            shape: outshape 
+            shape: outshape,
         }
     }
 }
