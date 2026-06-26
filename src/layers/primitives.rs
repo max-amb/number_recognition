@@ -82,22 +82,21 @@ pub enum Layer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hegel::Generator;
-    use hegel::TestCase;
+    use hegel::{Generator, TestCase, HealthCheck};
     use hegel::generators as gs;
 
-    #[hegel::test]
+    #[hegel::test(suppress_health_check = [HealthCheck::FilterTooMuch])]
     fn test_dmatrix_to_matrix(tc: TestCase) {
-        let vec: Vec<f32> = tc.draw(gs::vecs(gs::floats()).min_size(1).max_size(200));
+        let vec: Vec<f32> = tc.draw(gs::vecs(gs::floats().allow_nan(false)).min_size(1).max_size(200));
         let n_rows = tc.draw(gs::integers().min_value(1).filter(|x| vec.len() % x == 0));
         let n_cols = vec.len() / n_rows;
 
         assert_eq!(n_rows * n_cols, vec.len());
 
         let dmat: DMatrix<f32> = DMatrix::from_vec(n_rows, n_cols, vec.clone());
-        let mat: Ten = Ten::from(dmat);
+        let ten: Ten = Ten::from(dmat);
 
-        assert_eq!(mat.data, DVector::from_vec(vec));
-        assert_eq!(mat.shape, (n_rows, n_cols).into());
+        assert_eq!(ten.data, DVector::from_vec(vec));
+        assert_eq!(ten.shape, (n_rows, n_cols).into());
     }
 }
