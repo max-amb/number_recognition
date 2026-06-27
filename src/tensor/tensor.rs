@@ -158,7 +158,7 @@ mod tests {
         assert_eq!(ten.shape, (n_rows, n_cols).into());
     }
 
-    #[hegel::test]
+    #[hegel::test(test_cases = 10000)]
     fn test_vec_of_dmatrix_to_tensor(tc: TestCase) {
         let vec: Vec<f32> = tc.draw(gs::vecs(gs::floats().allow_nan(false)).min_size(1).max_size(2000));
         let nrows = tc.draw(gs::integers().min_value(1).max_value(vec.len()).filter(|x| vec.len().is_multiple_of(*x)));
