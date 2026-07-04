@@ -9,5 +9,5 @@ pub use activations::Activation;
 pub use convolution::{Convolution, Kernel};
 pub use fully_connected::FullyConnected;
 pub use pool::Pool;
-pub use primitives::{Forward, Initialisable, Layer};
+pub use primitives::{Backward, Forward, Initialisable, Layer};
 pub use convolvable::Convolvable;

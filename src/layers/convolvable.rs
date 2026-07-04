@@ -1,4 +1,4 @@
-use nalgebra::{DMatrix};
+use nalgebra::{DMatrix, Dyn};
 use crate::tensor::{Shape, Ten};
 
 pub trait Convolvable {
