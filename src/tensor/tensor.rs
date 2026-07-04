@@ -18,6 +18,24 @@ impl Ten {
             shape: self.shape,
         }
     }
+
+    pub fn transpose(&self) -> Self {
+        let matrix_magnitude = self.shape.nrows * self.shape.ncols;
+        let output_shape: Shape = (self.shape.ncols, self.shape.nrows, self.shape.channels).into();
+        let mut result: Vec<f32> = Vec::with_capacity(output_shape.magnitude());
+        // This is viable because reshape_generic is zero cost, https://docs.rs/nalgebra/latest/nalgebra/base/struct.Matrix.html#method.reshape_generic.
+        // And so is collection.
+        for channel in (0..self.shape.channels).map(|x| x*matrix_magnitude) {
+            let mat_as_vec = self.data
+                .view((channel, 0), (matrix_magnitude, 1));
+            let mat_transposed = mat_as_vec.reshape_generic(Dyn(output_shape.nrows), Dyn(output_shape.ncols)).transpose();
+            result.extend(mat_transposed.into_iter().copied());
+        }
+        Self {
+            data: DVector::from_vec(result),
+            shape: output_shape
+        }
+    }
 }
 
 impl From<DMatrix<f32>> for Ten {
