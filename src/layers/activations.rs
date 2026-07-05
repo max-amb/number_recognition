@@ -1,7 +1,7 @@
 use nalgebra::DVector;
 
 use crate::layers::{Forward, Initialisable};
-use crate::tensor::{Ten, Shape};
+use crate::tensor::{Shape, Ten};
 
 #[derive(Debug)]
 pub enum Activation {

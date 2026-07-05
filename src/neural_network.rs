@@ -10,8 +10,8 @@ use std::thread;
 use crate::cost::CostFunction;
 use crate::layers::{Forward, Initialisable, Layer};
 use crate::optimisation_algos::{Optimisation, OptimisationAlgorithms};
-use crate::training_data::TrainingData;
 use crate::tensor::{Shape, Ten};
+use crate::training_data::TrainingData;
 
 #[derive(Debug)]
 pub struct NN {
@@ -20,11 +20,7 @@ pub struct NN {
 }
 
 impl NN {
-    pub fn new(
-        mut layers: Vec<Layer>,
-        input_shape: Shape,
-        cost_function: CostFunction,
-    ) -> NN {
+    pub fn new(mut layers: Vec<Layer>, input_shape: Shape, cost_function: CostFunction) -> NN {
         let mut curr_shape = input_shape;
         layers
             .iter_mut()

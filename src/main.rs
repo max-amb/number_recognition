@@ -1,23 +1,23 @@
 #![allow(unused_imports)]
 use std::io;
 
+pub mod cost;
+pub mod initialisation;
+pub mod layers;
 pub mod neural_network;
 pub mod optimisation_algos;
-pub mod training_data;
-pub mod cost;
-pub mod layers;
-pub mod initialisation;
 pub mod tensor;
+pub mod training_data;
 
-use neural_network::NN;
-use initialisation::InitialisationOptions;
 use cost::CostFunction;
+use initialisation::InitialisationOptions;
+use neural_network::NN;
 use optimisation_algos::OptimisationAlgorithms;
 use std::sync::mpsc;
 use training_data::TrainingData;
 
 fn main() {
-    let data_for_training= TrainingData::new(
+    let data_for_training = TrainingData::new(
         "/home/max/Downloads/train-labels.idx1-ubyte",
         "/home/max/Downloads/train-images.idx3-ubyte",
         60000,

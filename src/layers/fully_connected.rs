@@ -1,7 +1,7 @@
 use nalgebra::DVector;
 
 use crate::initialisation::InitialisationOptions;
-use crate::layers::{Forward, Initialisable, Backward};
+use crate::layers::{Backward, Forward, Initialisable};
 use crate::tensor::{Shape, Ten};
 
 #[derive(Debug)]
@@ -49,25 +49,36 @@ impl Initialisable for FullyConnected {
 
 pub struct FullyConnectedDelta {
     delta_weights: Ten,
-    delta_biases: Ten
+    delta_biases: Ten,
 }
 
 impl std::ops::Add for FullyConnectedDelta {
-    type Output = FullyConnectedDelta; 
+    type Output = FullyConnectedDelta;
 
     fn add(self, rhs: Self) -> Self::Output {
         Self {
             delta_weights: self.delta_weights + rhs.delta_weights,
-            delta_biases: self.delta_biases + rhs.delta_biases
+            delta_biases: self.delta_biases + rhs.delta_biases,
         }
     }
 }
 
 impl Backward<FullyConnectedDelta> for FullyConnected {
-    fn backprop(&self, following_layer_derivatives: Ten, previous_layer_output: &Ten) -> (Ten, FullyConnectedDelta) {
-        let delta_weights = &following_layer_derivatives*(previous_layer_output.transpose());
-        let prev_layer_derivatatives= (self.weights.as_ref().unwrap().transpose())*(&following_layer_derivatives);
-        (prev_layer_derivatatives, FullyConnectedDelta { delta_weights, delta_biases: following_layer_derivatives })
+    fn backprop(
+        &self,
+        following_layer_derivatives: Ten,
+        previous_layer_output: &Ten,
+    ) -> (Ten, FullyConnectedDelta) {
+        let delta_weights = &following_layer_derivatives * (previous_layer_output.transpose());
+        let prev_layer_derivatatives =
+            (self.weights.as_ref().unwrap().transpose()) * (&following_layer_derivatives);
+        (
+            prev_layer_derivatatives,
+            FullyConnectedDelta {
+                delta_weights,
+                delta_biases: following_layer_derivatives,
+            },
+        )
     }
 
     fn apply(&mut self, delta: FullyConnectedDelta) {

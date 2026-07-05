@@ -21,7 +21,7 @@ impl Optimisation {
         optimisation_algorithm: OptimisationAlgorithms,
         learning_rate: f32,
         cycle_size: usize,
-        momentum: Option<f32>
+        momentum: Option<f32>,
     ) -> Self {
         match optimisation_algorithm {
             OptimisationAlgorithms::StochasticGradientDescent => Optimisation {

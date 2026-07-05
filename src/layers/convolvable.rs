@@ -1,5 +1,5 @@
-use nalgebra::{DMatrix, Dyn};
 use crate::tensor::{Shape, Ten};
+use nalgebra::{DMatrix, Dyn};
 
 pub trait Convolvable {
     fn shape(&self) -> Shape;

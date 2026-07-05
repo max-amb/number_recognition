@@ -1,8 +1,8 @@
 use nalgebra::{Const, DMatrix, Dyn};
 
 use crate::initialisation::InitialisationOptions;
-use crate::layers::primitives::{im2col, out_shape};
-use crate::layers::{Convolvable, Forward, Initialisable};
+use crate::layers::convolvable::{im2col, out_shape};
+use crate::layers::{Backward, Convolvable, Forward, Initialisable};
 use crate::tensor::{Shape, Ten};
 
 #[derive(Debug)]
@@ -36,6 +36,46 @@ pub struct Convolution {
     zero_padding: usize,
     initialisation_options: InitialisationOptions,
     shape: (usize, usize),
+}
+
+struct ConvolutionDelta {
+    // For caching, not seperate biases and tensors
+    delta_kernels: Vec<(Ten, f32)>,
+}
+
+impl std::ops::Add for ConvolutionDelta {
+    type Output = ConvolutionDelta;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        let mut iterator = std::iter::zip(self.delta_kernels, rhs.delta_kernels);
+        let starting_val = match iterator.next() {
+            Some(x) => vec![(x.0.0 + x.1.0, x.0.1 + x.1.1)],
+            None => {
+                return ConvolutionDelta {
+                    delta_kernels: Vec::new(),
+                };
+            }
+        };
+        ConvolutionDelta {
+            delta_kernels: iterator.fold(starting_val, |v, x| {
+                [v, vec![(x.0.0 + x.1.0, x.0.1 + x.1.1)]].concat()
+            }),
+        }
+    }
+}
+
+impl Backward<ConvolutionDelta> for Convolution {
+    fn backprop(
+        &self,
+        following_layer_derivatives: Ten,
+        previous_layer_output: &Ten,
+    ) -> (Ten, ConvolutionDelta) {
+        todo!()
+    }
+
+    fn apply(&mut self, delta: ConvolutionDelta) {
+        todo!()
+    }
 }
 
 impl Convolvable for Convolution {
@@ -89,8 +129,9 @@ impl Forward for Convolution {
         let previous_layers_channels = prev_layer.shape.channels;
 
         let prev_columnised = im2col(prev_layer, self);
-        let mut rows_of_kernels: Vec<f32> =
-            Vec::with_capacity(self.shape.0 * self.shape.1 * self.kernels.len() * previous_layers_channels);
+        let mut rows_of_kernels: Vec<f32> = Vec::with_capacity(
+            self.shape.0 * self.shape.1 * self.kernels.len() * previous_layers_channels,
+        );
 
         for kern in &self.kernels {
             rows_of_kernels.extend(kern.kernel.as_ref().unwrap().data.into_iter().copied());
@@ -109,10 +150,12 @@ impl Forward for Convolution {
                 .cycle()
                 .take(self.kernels.len() * prev_columnised.ncols()),
         );
-        let res = ((matrix_of_kernels * &prev_columnised) + biases_mat).transpose().reshape_generic(
-            Dyn(self.kernels.len() * prev_columnised.ncols()),
-            Const::<1>,
-        );
+        let res = ((matrix_of_kernels * &prev_columnised) + biases_mat)
+            .transpose()
+            .reshape_generic(
+                Dyn(self.kernels.len() * prev_columnised.ncols()),
+                Const::<1>,
+            );
         Ten {
             data: res,
             shape: outshape,

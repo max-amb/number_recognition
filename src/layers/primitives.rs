@@ -1,5 +1,5 @@
-use std::ops::Add;
 use enum_dispatch::enum_dispatch;
+use std::ops::Add;
 
 use crate::layers::Activation;
 use crate::layers::Convolution;
