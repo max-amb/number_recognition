@@ -1,17 +1,53 @@
 use crate::tensor::{Shape, Ten};
-use nalgebra::{DMatrix, Dyn};
+use nalgebra::{DMatrix, DVector, Dyn};
 
 pub trait Convolvable {
-    fn shape(&self) -> Shape;
+    fn filter_shape(&self) -> Shape;
     fn zero_padding(&self) -> usize;
-    fn stride(&self) -> usize;
     fn out_depth(&self) -> usize;
+    fn stride(&self) -> usize;
 }
 
-pub fn im2col(m: Ten, conv: &dyn Convolvable) -> DMatrix<f32> {
+pub fn col2im(m: &Ten, conv: &dyn Convolvable, outshape: Shape) -> Ten {
+    let mut res: Vec<DMatrix<f32>> = Vec::from_iter(
+        (0..outshape.channels).map(|_| DMatrix::from_element(outshape.nrows, outshape.ncols, 0.0)),
+    );
+
+    let filtersize = conv.filter_shape().nrows * conv.filter_shape().ncols;
+    let output_of_layer_shape = out_shape(outshape, conv);
+
+    for (i, kern_tensor) in (0..m.shape.magnitude()).step_by(m.shape.nrows).enumerate() {
+        // For column in m, each of these is r_k * c_k * d_{in}
+
+        for (j, mat_in_kern) in (kern_tensor..(kern_tensor + m.shape.nrows))
+            .step_by(filtersize)
+            .enumerate()
+        {
+            // For matrix in that column, each of these is r_k * c_k
+
+            let starting_row = (i % output_of_layer_shape.nrows) * conv.stride();
+            let starting_col = (i / output_of_layer_shape.nrows) * conv.stride();
+            let mut view = res[j].index_mut((
+                starting_row..(starting_row + conv.filter_shape().nrows),
+                starting_col..(starting_col + conv.filter_shape().ncols),
+            ));
+            let filter = m.data.view((mat_in_kern, 0), (filtersize, 1));
+            view += filter.reshape_generic(
+                Dyn(conv.filter_shape().nrows),
+                Dyn(conv.filter_shape().ncols),
+            );
+        }
+    }
+    Ten {
+        data: DVector::from_iterator(outshape.magnitude(), res.iter().flatten().copied()),
+        shape: outshape,
+    }
+}
+
+pub fn im2col(m: &Ten, conv: &dyn Convolvable) -> DMatrix<f32> {
     let outshape = out_shape(m.shape, conv);
     let (nrows, ncols) = m.shape.flat_shape();
-    let (krows, kcols) = conv.shape().flat_shape();
+    let (krows, kcols) = conv.filter_shape().flat_shape();
     let jump_size = nrows * ncols;
 
     let mut columns = Vec::with_capacity(outshape.magnitude());
@@ -43,12 +79,17 @@ pub fn im2col(m: Ten, conv: &dyn Convolvable) -> DMatrix<f32> {
     )
 }
 
+/// Given an input shape, i.e. the shape of the previous layer's output,
+/// we give the output shape based on the convolution being applied (represented by the convolvable
+/// trait). It takes into account all characteristics in the Convolvable trait.
 pub fn out_shape(in_shape: Shape, conv: &dyn Convolvable) -> Shape {
     assert!(
-        conv.shape().nrows <= in_shape.nrows + conv.zero_padding()
-            && conv.shape().ncols <= in_shape.ncols + conv.zero_padding()
+        conv.filter_shape().nrows <= in_shape.nrows + conv.zero_padding()
+            && conv.filter_shape().ncols <= in_shape.ncols + conv.zero_padding()
     );
-    let new_nrows = ((in_shape.nrows + conv.zero_padding()) - conv.shape().nrows) / conv.stride();
-    let new_ncols = ((in_shape.ncols + conv.zero_padding()) - conv.shape().ncols) / conv.stride();
+    let new_nrows =
+        ((in_shape.nrows + conv.zero_padding()) - conv.filter_shape().nrows) / conv.stride();
+    let new_ncols =
+        ((in_shape.ncols + conv.zero_padding()) - conv.filter_shape().ncols) / conv.stride();
     (new_nrows, new_ncols, conv.out_depth()).into()
 }

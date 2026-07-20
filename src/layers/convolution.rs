@@ -79,7 +79,7 @@ impl Backward<ConvolutionDelta> for Convolution {
 }
 
 impl Convolvable for Convolution {
-    fn shape(&self) -> Shape {
+    fn filter_shape(&self) -> Shape {
         self.shape.into()
     }
 
@@ -128,7 +128,7 @@ impl Forward for Convolution {
         let outshape = out_shape(prev_layer.shape, self);
         let previous_layers_channels = prev_layer.shape.channels;
 
-        let prev_columnised = im2col(prev_layer, self);
+        let prev_columnised = im2col(&prev_layer, self);
         let mut rows_of_kernels: Vec<f32> = Vec::with_capacity(
             self.shape.0 * self.shape.1 * self.kernels.len() * previous_layers_channels,
         );
@@ -140,7 +140,7 @@ impl Forward for Convolution {
         let matrix_of_kernels = DMatrix::from_row_iterator(
             self.kernels.len(),
             self.shape.0 * self.shape.1 * previous_layers_channels,
-            rows_of_kernels.into_iter(),
+            rows_of_kernels,
         );
         let biases_mat: DMatrix<f32> = DMatrix::from_iterator(
             self.kernels.len(),

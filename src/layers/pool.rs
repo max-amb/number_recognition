@@ -59,7 +59,7 @@ impl Convolvable for Pool {
         self.output_depth.unwrap()
     }
 
-    fn shape(&self) -> Shape {
+    fn filter_shape(&self) -> Shape {
         self.shape.into()
     }
 
@@ -76,7 +76,7 @@ impl Forward for Pool {
     fn run(&self, prev_layer: Ten) -> Ten {
         let outshape = out_shape(prev_layer.shape, self);
         let size_of_view = self.shape.0 * self.shape.1;
-        let prev_columnised = im2col(prev_layer, self);
+        let prev_columnised = im2col(&prev_layer, self);
         let mut result: Vec<f32> = Vec::with_capacity(outshape.magnitude());
 
         for i in 0..outshape.channels {
