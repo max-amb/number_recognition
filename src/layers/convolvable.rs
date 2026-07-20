@@ -8,7 +8,7 @@ pub trait Convolvable {
     fn stride(&self) -> usize;
 }
 
-pub fn col2im(m: &Ten, conv: &dyn Convolvable, outshape: Shape) -> Ten {
+pub fn col2im(m: &DMatrix<f32>, conv: &dyn Convolvable, outshape: Shape) -> Ten {
     let mut res: Vec<DMatrix<f32>> = Vec::from_iter(
         (0..outshape.channels).map(|_| DMatrix::from_element(outshape.nrows, outshape.ncols, 0.0)),
     );
@@ -16,13 +16,10 @@ pub fn col2im(m: &Ten, conv: &dyn Convolvable, outshape: Shape) -> Ten {
     let filtersize = conv.filter_shape().nrows * conv.filter_shape().ncols;
     let output_of_layer_shape = out_shape(outshape, conv);
 
-    for (i, kern_tensor) in (0..m.shape.magnitude()).step_by(m.shape.nrows).enumerate() {
+    for (i, kern_tensor) in m.column_iter().enumerate() {
         // For column in m, each of these is r_k * c_k * d_{in}
 
-        for (j, mat_in_kern) in (kern_tensor..(kern_tensor + m.shape.nrows))
-            .step_by(filtersize)
-            .enumerate()
-        {
+        for (j, mat_in_kern) in (0..kern_tensor.len()).step_by(filtersize).enumerate() {
             // For matrix in that column, each of these is r_k * c_k
 
             let starting_row = (i % output_of_layer_shape.nrows) * conv.stride();
@@ -31,7 +28,8 @@ pub fn col2im(m: &Ten, conv: &dyn Convolvable, outshape: Shape) -> Ten {
                 starting_row..(starting_row + conv.filter_shape().nrows),
                 starting_col..(starting_col + conv.filter_shape().ncols),
             ));
-            let filter = m.data.view((mat_in_kern, 0), (filtersize, 1));
+
+            let filter = kern_tensor.view((mat_in_kern, 0), (filtersize, 1));
             view += filter.reshape_generic(
                 Dyn(conv.filter_shape().nrows),
                 Dyn(conv.filter_shape().ncols),
