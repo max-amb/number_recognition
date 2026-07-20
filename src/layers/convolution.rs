@@ -1,7 +1,7 @@
-use nalgebra::{Const, DMatrix, Dyn};
+use nalgebra::{Const, DMatrix, DVector, Dyn};
 
 use crate::initialisation::InitialisationOptions;
-use crate::layers::convolvable::{im2col, out_shape};
+use crate::layers::convolvable::{col2im, im2col, out_shape};
 use crate::layers::{Backward, Convolvable, Forward, Initialisable};
 use crate::tensor::{Shape, Ten};
 
@@ -38,29 +38,15 @@ pub struct Convolution {
     shape: (usize, usize),
 }
 
-struct ConvolutionDelta {
-    // For caching, not seperate biases and tensors
-    delta_kernels: Vec<(Ten, f32)>,
-}
+// For caching, not seperate biases and tensors
+struct ConvolutionDelta(pub Vec<(Ten, f32)>);
 
 impl std::ops::Add for ConvolutionDelta {
     type Output = ConvolutionDelta;
 
     fn add(self, rhs: Self) -> Self::Output {
-        let mut iterator = std::iter::zip(self.delta_kernels, rhs.delta_kernels);
-        let starting_val = match iterator.next() {
-            Some(x) => vec![(x.0.0 + x.1.0, x.0.1 + x.1.1)],
-            None => {
-                return ConvolutionDelta {
-                    delta_kernels: Vec::new(),
-                };
-            }
-        };
-        ConvolutionDelta {
-            delta_kernels: iterator.fold(starting_val, |v, x| {
-                [v, vec![(x.0.0 + x.1.0, x.0.1 + x.1.1)]].concat()
-            }),
-        }
+        let iterator = std::iter::zip(self.0, rhs.0);
+        ConvolutionDelta(iterator.map(|(l, r)| (l.0 + r.0, l.1 + r.1)).collect())
     }
 }
 
@@ -70,11 +56,75 @@ impl Backward<ConvolutionDelta> for Convolution {
         following_layer_derivatives: Ten,
         previous_layer_output: &Ten,
     ) -> (Ten, ConvolutionDelta) {
-        todo!()
+        let outshape = out_shape(previous_layer_output.shape, self);
+        let flattened_derivatives: DMatrix<f32> = DMatrix::from_row_iterator(
+            outshape.channels,
+            outshape.nrows * outshape.ncols,
+            following_layer_derivatives.data.into_iter().copied(),
+        );
+        let prev_columnised = im2col(previous_layer_output, self).transpose();
+        let filter_derivatives = &flattened_derivatives * prev_columnised;
+
+        // Filter derivatives must be of shape (num of kernels) x (size of kernel)
+        assert_eq!(
+            filter_derivatives.shape(),
+            (
+                outshape.channels,
+                self.shape.0 * self.shape.1 * self.out_depth()
+            )
+        );
+
+        let bias: Vec<f32> = {
+            use itertools::Itertools;
+            let iterator_jump = outshape.flat_shape().0 * outshape.flat_shape().1;
+            Vec::from_iter(
+                following_layer_derivatives
+                    .data
+                    .into_iter()
+                    .copied()
+                    .chunks(iterator_jump)
+                    .into_iter()
+                    .map(|c| c.sum::<f32>()),
+            )
+        };
+
+        let delta = Vec::from_iter(std::iter::zip(filter_derivatives.row_iter(), bias).map(
+            |(f, b)| {
+                let shape: Shape = (self.shape.0, self.shape.1, self.out_depth()).into();
+                (
+                    Ten {
+                        data: DVector::from_iterator(shape.magnitude(), f.into_iter().copied()),
+                        shape,
+                    },
+                    b,
+                )
+            },
+        ));
+
+        let flattened_kernels = DMatrix::from_iterator(
+            self.shape.0 * self.shape.1 * previous_layer_output.shape.channels,
+            self.kernels.len(),
+            self.kernels
+                .iter()
+                .flat_map(|x| x.kernel.as_ref().unwrap().data.into_iter().copied()),
+        );
+        let current_layer_derivatives: Ten = col2im(
+            &(flattened_kernels * flattened_derivatives),
+            self,
+            previous_layer_output.shape,
+        );
+
+        (current_layer_derivatives, ConvolutionDelta(delta))
     }
 
     fn apply(&mut self, delta: ConvolutionDelta) {
-        todo!()
+        self.kernels
+            .iter_mut()
+            .enumerate()
+            .for_each(|(i, Kernel { kernel, bias, .. })| {
+                *kernel = Some(kernel.as_ref().unwrap() + &delta.0[i].0);
+                *bias += delta.0[i].1;
+            });
     }
 }
 
