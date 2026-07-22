@@ -77,6 +77,30 @@ impl From<DVector<f32>> for Ten {
     }
 }
 
+impl std::ops::Add for &Ten {
+    type Output = Ten;
+    fn add(self, rhs: &Ten) -> Self::Output {
+        assert_eq!(rhs.shape, self.shape);
+        let new_data = &self.data + &rhs.data;
+        Self::Output {
+            data: new_data,
+            shape: self.shape,
+        }
+    }
+}
+
+impl std::ops::Sub for &Ten {
+    type Output = Ten;
+    fn sub(self, rhs: &Ten) -> Self::Output {
+        assert_eq!(rhs.shape, self.shape);
+        let new_data = &self.data - &rhs.data;
+        Self::Output {
+            data: new_data,
+            shape: self.shape,
+        }
+    }
+}
+
 impl std::ops::Add for Ten {
     type Output = Ten;
     fn add(self, rhs: Self) -> Self::Output {
@@ -98,15 +122,24 @@ impl std::ops::Add<&Ten> for Ten {
     }
 }
 
-impl std::ops::Add for &Ten {
+impl std::ops::Sub for Ten {
     type Output = Ten;
-    fn add(self, rhs: &Ten) -> Self::Output {
-        assert_eq!(rhs.shape, self.shape);
-        let new_data = &self.data + &rhs.data;
-        Self::Output {
-            data: new_data,
-            shape: self.shape,
-        }
+    fn sub(self, rhs: Self) -> Self::Output {
+        &self + &rhs
+    }
+}
+
+impl std::ops::Sub<Ten> for &Ten {
+    type Output = Ten;
+    fn sub(self, rhs: Ten) -> Self::Output {
+        self + &rhs
+    }
+}
+
+impl std::ops::Sub<&Ten> for Ten {
+    type Output = Ten;
+    fn sub(self, rhs: &Self) -> Self::Output {
+        &self + rhs
     }
 }
 
