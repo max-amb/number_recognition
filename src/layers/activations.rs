@@ -12,7 +12,7 @@ pub enum Activation {
 }
 
 impl Forward for Activation {
-    fn run(&self, prev_layer: Ten) -> Ten {
+    fn run(&self, prev_layer: &Ten) -> Ten {
         prev_layer.fmap(|val| match self {
             Activation::Sigmoid => val.map(sigmoid),
             Activation::Relu => relu(val),
@@ -36,7 +36,7 @@ impl Backward for Activation {
             Activation::Sigmoid => val.map(sigmoid_derivative),
             Activation::Relu => val.map(relu_derivative),
             Activation::Softmax => softmax_derivative(val),
-            Activation::LeakyRelu { alpha } => leaky_relu(val, *alpha),
+            Activation::LeakyRelu { alpha } => leaky_relu_derivative(val, *alpha),
         }), Delta::ACTIVATIOND(()))
     }
 }
@@ -49,27 +49,27 @@ fn sigmoid_derivative(inp: f32) -> f32 {
     sigmoid(inp) * (1.0-sigmoid(inp))
 }
 
-fn softmax(layer: DVector<f32>) -> DVector<f32> {
+fn softmax(layer: &DVector<f32>) -> DVector<f32> {
     let layers_max = layer.max();
     let exponentials =
         DVector::from_iterator(layer.nrows(), layer.iter().map(|x| (x - layers_max).exp()));
     &exponentials / exponentials.sum()
 }
 
-fn softmax_derivative(layer: DVector<f32>) -> DVector<f32> {
+fn softmax_derivative(_layer: &DVector<f32>) -> DVector<f32> {
     panic!()
 }
 
-fn leaky_relu(layer: DVector<f32>, alpha: f32) -> DVector<f32> {
+fn leaky_relu(layer: &DVector<f32>, alpha: f32) -> DVector<f32> {
     layer.map(|x| if x.lt(&0.0) { alpha * x } else { x })
 }
 
-fn relu(layer: DVector<f32>) -> DVector<f32> {
+fn relu(layer: &DVector<f32>) -> DVector<f32> {
     layer.map(|x| if x.lt(&0.0) { 0.0 } else { x })
 }
 
-pub fn leaky_relu_derivative(input: f32, alpha: f32) -> f32 {
-    if input.lt(&0.0) { alpha } else { 1.0 }
+pub fn leaky_relu_derivative(input: &DVector<f32>, alpha: f32) -> DVector<f32> {
+    input.map(|x| if x.lt(&0.0) { alpha } else { 1.0 })
 }
 
 pub fn relu_derivative(input: f32) -> f32 {

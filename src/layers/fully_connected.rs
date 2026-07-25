@@ -15,7 +15,7 @@ pub struct FullyConnected {
 }
 
 impl FullyConnected {
-    fn new(output_shape: Shape, initialisation_options: InitialisationOptions) -> Self {
+    pub fn new(output_shape: Shape, initialisation_options: InitialisationOptions) -> Self {
         Self {
             output_shape,
             weights: None,
@@ -26,8 +26,8 @@ impl FullyConnected {
 }
 
 impl Forward for FullyConnected {
-    fn run(&self, prev_layer: Ten) -> Ten {
-        let data: Ten = self.weights.as_ref().unwrap() * prev_layer + self.biases.as_ref().unwrap();
+    fn run(&self, prev_layer: &Ten) -> Ten {
+        let data: Ten = self.weights.as_ref().unwrap() % prev_layer + self.biases.as_ref().unwrap();
         assert_eq!(data.shape.magnitude(), self.output_shape.magnitude());
         Ten {
             data: data.data,
@@ -48,6 +48,7 @@ impl Initialisable for FullyConnected {
     }
 }
 
+#[derive(Debug)]
 pub struct FullyConnectedDelta {
     delta_weights: Ten,
     delta_biases: Ten,
@@ -70,14 +71,14 @@ impl Backward for FullyConnected {
         following_layer_derivatives: Ten,
         previous_layer_output: &Ten,
     ) -> (Ten, Delta) {
-        let delta_weights = &following_layer_derivatives * (previous_layer_output.transpose());
-        let prev_layer_derivatatives =
-            (self.weights.as_ref().unwrap().transpose()) * (&following_layer_derivatives);
+        let mut delta_biases = (self.weights.as_ref().unwrap().transpose()) * (&following_layer_derivatives);
+        delta_biases.shape = previous_layer_output.shape;
+        let delta_weights = &delta_biases * (previous_layer_output.transpose());
         (
-            prev_layer_derivatatives,
+            delta_biases.clone(),
             Delta::FCD(FullyConnectedDelta {
                 delta_weights,
-                delta_biases: following_layer_derivatives,
+                delta_biases
             }),
         )
     }

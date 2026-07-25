@@ -40,6 +40,7 @@ pub struct Convolution {
 }
 
 // For caching, not seperate biases and tensors
+#[derive(Debug)]
 pub struct ConvolutionDelta(pub Vec<(Ten, f32)>);
 
 impl std::ops::Add for ConvolutionDelta {
@@ -64,14 +65,16 @@ impl Backward for Convolution {
             following_layer_derivatives.data.into_iter().copied(),
         );
         let prev_columnised = im2col(previous_layer_output, self).transpose();
+        dbg!(prev_columnised.shape());
         let filter_derivatives = &flattened_derivatives * prev_columnised;
+        dbg!(filter_derivatives.shape());
 
         // Filter derivatives must be of shape (num of kernels) x (size of kernel)
         assert_eq!(
             filter_derivatives.shape(),
             (
                 outshape.channels,
-                self.shape.0 * self.shape.1 * self.out_depth()
+                self.shape.0 * self.shape.1 * previous_layer_output.shape.channels,
             )
         );
 
@@ -91,7 +94,7 @@ impl Backward for Convolution {
 
         let delta = Vec::from_iter(std::iter::zip(filter_derivatives.row_iter(), bias).map(
             |(f, b)| {
-                let shape: Shape = (self.shape.0, self.shape.1, self.out_depth()).into();
+                let shape: Shape = (self.shape.0, self.shape.1, previous_layer_output.shape.channels).into();
                 (
                     Ten {
                         data: DVector::from_iterator(shape.magnitude(), f.into_iter().copied()),
@@ -156,7 +159,7 @@ impl Initialisable for Convolution {
         for kern in &mut self.kernels {
             kern.initialise(previous_shape, self.initialisation_options);
         }
-        (self.shape.0, self.shape.1, self.kernels.len()).into()
+        out_shape(previous_shape, self)
     }
 }
 
@@ -179,7 +182,7 @@ impl Convolution {
 }
 
 impl Forward for Convolution {
-    fn run(&self, prev_layer: Ten) -> Ten {
+    fn run(&self, prev_layer: &Ten) -> Ten {
         let outshape = out_shape(prev_layer.shape, self);
         let previous_layers_channels = prev_layer.shape.channels;
 

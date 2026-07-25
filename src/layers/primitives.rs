@@ -14,7 +14,7 @@ pub trait Initialisable {
 
 #[enum_dispatch]
 pub trait Forward {
-    fn run(&self, prev_layer: Ten) -> Ten;
+    fn run(&self, prev_layer: &Ten) -> Ten;
 }
 
 #[enum_dispatch]
@@ -23,6 +23,7 @@ pub trait Backward {
     fn apply(&mut self, delta: Delta);
 }
 
+#[derive(Debug)]
 pub enum Delta {
     FCD(FullyConnectedDelta),
     CONVD(ConvolutionDelta),
