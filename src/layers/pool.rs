@@ -1,6 +1,7 @@
 use nalgebra::{DMatrix, DVector};
 
 use crate::layers::convolvable::{col2im, im2col, out_shape};
+use crate::layers::primitives::Delta;
 use crate::layers::{Backward, Convolvable, Forward, Initialisable};
 use crate::tensor::{Shape, Ten};
 
@@ -19,7 +20,7 @@ pub struct Pool {
 }
 
 impl Pool {
-    fn new(shape: (usize, usize), stride: usize, pool_type: PoolType) -> Self {
+    pub fn new(shape: (usize, usize), stride: usize, pool_type: PoolType) -> Self {
         Self {
             shape,
             stride,
@@ -92,18 +93,16 @@ impl Forward for Pool {
     }
 }
 
-impl Backward<()> for Pool {
-    fn apply(&mut self, delta: ()) {
-        return;
-    }
+impl Backward for Pool {
+    fn apply(&mut self, _: Delta) { }
 
-    fn backprop(&self, following_layer_derivatives: Ten, previous_layer_output: &Ten) -> (Ten, ()) {
+    fn backprop(&self, _: Ten, previous_layer_output: &Ten) -> (Ten, Delta) {
         match self.pool_type {
-            // TODO: Inefficient as hell!
+            // TODO: Inefficient as hell AND INCORRECT
             PoolType::MaxPool => {
                 let mut prev_columnised = im2col(&previous_layer_output, self);
                 for mut column in prev_columnised.column_iter_mut() {
-                    let max = column.max();
+                    let max = &column.max();
                     column.iter_mut().for_each(|x| {
                         if x != max {
                             *x = 0.0;
@@ -112,7 +111,7 @@ impl Backward<()> for Pool {
                 }
                 (
                     col2im(&prev_columnised, self, previous_layer_output.shape),
-                    (),
+                    Delta::POOLD(()),
                 )
             }
             PoolType::AvgPool => {

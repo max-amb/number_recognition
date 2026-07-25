@@ -1,6 +1,7 @@
 use nalgebra::DVector;
 
 use crate::initialisation::InitialisationOptions;
+use crate::layers::primitives::Delta;
 use crate::layers::{Backward, Forward, Initialisable};
 use crate::tensor::{Shape, Ten};
 
@@ -63,26 +64,30 @@ impl std::ops::Add for FullyConnectedDelta {
     }
 }
 
-impl Backward<FullyConnectedDelta> for FullyConnected {
+impl Backward for FullyConnected {
     fn backprop(
         &self,
         following_layer_derivatives: Ten,
         previous_layer_output: &Ten,
-    ) -> (Ten, FullyConnectedDelta) {
+    ) -> (Ten, Delta) {
         let delta_weights = &following_layer_derivatives * (previous_layer_output.transpose());
         let prev_layer_derivatatives =
             (self.weights.as_ref().unwrap().transpose()) * (&following_layer_derivatives);
         (
             prev_layer_derivatatives,
-            FullyConnectedDelta {
+            Delta::FCD(FullyConnectedDelta {
                 delta_weights,
                 delta_biases: following_layer_derivatives,
-            },
+            }),
         )
     }
 
-    fn apply(&mut self, delta: FullyConnectedDelta) {
-        self.biases = Some(self.biases.as_ref().unwrap() + delta.delta_biases);
-        self.weights = Some(self.weights.as_ref().unwrap() + delta.delta_weights);
+    fn apply(&mut self, delta: Delta) {
+        if let Delta::FCD(delta) = delta {
+            self.biases = Some(self.biases.as_ref().unwrap() + delta.delta_biases);
+            self.weights = Some(self.weights.as_ref().unwrap() + delta.delta_weights);
+        } else {
+            panic!()
+        }
     }
 }

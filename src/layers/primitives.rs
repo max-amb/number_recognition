@@ -1,9 +1,8 @@
 use enum_dispatch::enum_dispatch;
-use std::ops::Add;
 
 use crate::layers::Activation;
-use crate::layers::Convolution;
-use crate::layers::FullyConnected;
+use crate::layers::{Convolution, ConvolutionDelta};
+use crate::layers::{FullyConnected, FullyConnectedDelta};
 use crate::layers::Pool;
 
 use crate::tensor::{Shape, Ten};
@@ -18,14 +17,21 @@ pub trait Forward {
     fn run(&self, prev_layer: Ten) -> Ten;
 }
 
-pub trait Backward<D: Add<Output = D>> {
-    // TODO: Make more elegant input (perhaps ref to some network struct?)
-    fn backprop(&self, following_layer_derivatives: Ten, previous_layer_output: &Ten) -> (Ten, D);
-    fn apply(&mut self, delta: D);
+#[enum_dispatch]
+pub trait Backward {
+    fn backprop(&self, following_layer_derivatives: Ten, previous_layer_output: &Ten) -> (Ten, Delta);
+    fn apply(&mut self, delta: Delta);
+}
+
+pub enum Delta {
+    FCD(FullyConnectedDelta),
+    CONVD(ConvolutionDelta),
+    POOLD(()),
+    ACTIVATIOND(())
 }
 
 #[derive(Debug)]
-#[enum_dispatch(Forward, Initialisable)]
+#[enum_dispatch(Forward, Initialisable, Backward)]
 pub enum Layer {
     FC(FullyConnected),
     CONV(Convolution),

@@ -2,6 +2,7 @@ use nalgebra::{Const, DMatrix, DVector, Dyn};
 
 use crate::initialisation::InitialisationOptions;
 use crate::layers::convolvable::{col2im, im2col, out_shape};
+use crate::layers::primitives::Delta;
 use crate::layers::{Backward, Convolvable, Forward, Initialisable};
 use crate::tensor::{Shape, Ten};
 
@@ -39,7 +40,7 @@ pub struct Convolution {
 }
 
 // For caching, not seperate biases and tensors
-struct ConvolutionDelta(pub Vec<(Ten, f32)>);
+pub struct ConvolutionDelta(pub Vec<(Ten, f32)>);
 
 impl std::ops::Add for ConvolutionDelta {
     type Output = ConvolutionDelta;
@@ -50,12 +51,12 @@ impl std::ops::Add for ConvolutionDelta {
     }
 }
 
-impl Backward<ConvolutionDelta> for Convolution {
+impl Backward for Convolution {
     fn backprop(
         &self,
         following_layer_derivatives: Ten,
         previous_layer_output: &Ten,
-    ) -> (Ten, ConvolutionDelta) {
+    ) -> (Ten, Delta) {
         let outshape = out_shape(previous_layer_output.shape, self);
         let flattened_derivatives: DMatrix<f32> = DMatrix::from_row_iterator(
             outshape.channels,
@@ -114,17 +115,21 @@ impl Backward<ConvolutionDelta> for Convolution {
             previous_layer_output.shape,
         );
 
-        (current_layer_derivatives, ConvolutionDelta(delta))
+        (current_layer_derivatives, Delta::CONVD(ConvolutionDelta(delta)))
     }
 
-    fn apply(&mut self, delta: ConvolutionDelta) {
-        self.kernels
-            .iter_mut()
-            .enumerate()
-            .for_each(|(i, Kernel { kernel, bias, .. })| {
-                *kernel = Some(kernel.as_ref().unwrap() + &delta.0[i].0);
-                *bias += delta.0[i].1;
-            });
+    fn apply(&mut self, delta: Delta) {
+        if let Delta::CONVD(delta) = delta {
+            self.kernels
+                .iter_mut()
+                .enumerate()
+                .for_each(|(i, Kernel { kernel, bias, .. })| {
+                    *kernel = Some(kernel.as_ref().unwrap() + &delta.0[i].0);
+                    *bias += delta.0[i].1;
+                });
+        } else {
+            panic!();
+        }
     }
 }
 
@@ -156,7 +161,7 @@ impl Initialisable for Convolution {
 }
 
 impl Convolution {
-    fn new(
+    pub fn new(
         num_of_kernels: usize,
         shape: (usize, usize),
         stride: usize,
