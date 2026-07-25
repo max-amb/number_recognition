@@ -1,6 +1,6 @@
 use nalgebra::DVector;
 
-use crate::layers::{Forward, Initialisable};
+use crate::layers::{Backward, Delta, Forward, Initialisable};
 use crate::tensor::{Shape, Ten};
 
 #[derive(Debug)]
@@ -14,7 +14,7 @@ pub enum Activation {
 impl Forward for Activation {
     fn run(&self, prev_layer: Ten) -> Ten {
         prev_layer.fmap(|val| match self {
-            Activation::Sigmoid => sigmoid(val),
+            Activation::Sigmoid => val.map(sigmoid),
             Activation::Relu => relu(val),
             Activation::LeakyRelu { alpha } => leaky_relu(val, *alpha),
             Activation::Softmax => softmax(val),
@@ -28,8 +28,25 @@ impl Initialisable for Activation {
     }
 }
 
-fn sigmoid(layer: DVector<f32>) -> DVector<f32> {
-    layer.map(|x| 1.0 / (1.0 + (-x).exp()))
+impl Backward for Activation {
+    fn apply(&mut self, _: Delta) { } 
+
+    fn backprop(&self, following_layer_derivatives: Ten, _: &Ten) -> (Ten,Delta) {
+        (following_layer_derivatives.fmap(|val| match self {
+            Activation::Sigmoid => val.map(sigmoid_derivative),
+            Activation::Relu => val.map(relu_derivative),
+            Activation::Softmax => softmax_derivative(val),
+            Activation::LeakyRelu { alpha } => leaky_relu(val, *alpha),
+        }), Delta::ACTIVATIOND(()))
+    }
+}
+
+fn sigmoid(inp: f32) -> f32 {
+    1.0 / (1.0 + (-inp).exp())
+}
+
+fn sigmoid_derivative(inp: f32) -> f32 {
+    sigmoid(inp) * (1.0-sigmoid(inp))
 }
 
 fn softmax(layer: DVector<f32>) -> DVector<f32> {
@@ -37,6 +54,10 @@ fn softmax(layer: DVector<f32>) -> DVector<f32> {
     let exponentials =
         DVector::from_iterator(layer.nrows(), layer.iter().map(|x| (x - layers_max).exp()));
     &exponentials / exponentials.sum()
+}
+
+fn softmax_derivative(layer: DVector<f32>) -> DVector<f32> {
+    panic!()
 }
 
 fn leaky_relu(layer: DVector<f32>, alpha: f32) -> DVector<f32> {
