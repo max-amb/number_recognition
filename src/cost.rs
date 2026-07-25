@@ -1,4 +1,4 @@
-use nalgebra::DVector;
+use crate::tensor::Ten;
 
 #[derive(Debug)]
 pub enum CostFunction {
@@ -7,17 +7,17 @@ pub enum CostFunction {
 }
 
 impl CostFunction {
-    pub fn calculate_cost(&self, observed: &DVector<f32>, expected: &DVector<f32>) -> f32 {
+    pub fn calculate_cost(&self, observed: &Ten, expected: &Ten) -> f32 {
         match self {
-            CostFunction::Quadratic => observed
+            CostFunction::Quadratic => observed.data
                 .iter()
                 .enumerate()
-                .map(|(i, x)| (x - expected[i]).powi(2))
+                .map(|(i, x)| (x - expected.data[i]).powi(2))
                 .sum::<f32>(),
-            CostFunction::CategoricalCrossEntropy => -expected
+            CostFunction::CategoricalCrossEntropy => -expected.data
                 .iter()
                 .enumerate()
-                .map(|(i, x)| x * ((f32::EPSILON + observed[i]).ln()))
+                .map(|(i, x)| x * ((f32::EPSILON + observed.data[i]).ln()))
                 .sum::<f32>(),
         }
     }
