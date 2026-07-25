@@ -1,4 +1,4 @@
-use nalgebra::{DMatrix, DVector};
+use nalgebra::DVector;
 
 use crate::layers::convolvable::{col2im, im2col, out_shape};
 use crate::layers::primitives::Delta;
@@ -74,7 +74,7 @@ impl Convolvable for Pool {
 }
 
 impl Forward for Pool {
-    fn run(&self, prev_layer: Ten) -> Ten {
+    fn run(&self, prev_layer: &Ten) -> Ten {
         let outshape = out_shape(prev_layer.shape, self);
         let size_of_view = self.shape.0 * self.shape.1;
         let prev_columnised = im2col(&prev_layer, self);
@@ -96,16 +96,18 @@ impl Forward for Pool {
 impl Backward for Pool {
     fn apply(&mut self, _: Delta) { }
 
-    fn backprop(&self, _: Ten, previous_layer_output: &Ten) -> (Ten, Delta) {
+    fn backprop(&self, following_layer_derivatives: Ten, previous_layer_output: &Ten) -> (Ten, Delta) {
         match self.pool_type {
-            // TODO: Inefficient as hell AND INCORRECT
+            // TODO: Inefficient as hell
             PoolType::MaxPool => {
-                let mut prev_columnised = im2col(&previous_layer_output, self);
-                for mut column in prev_columnised.column_iter_mut() {
+                let mut prev_columnised = im2col(previous_layer_output, self);
+                for (mut column, deriv) in std::iter::zip(prev_columnised.column_iter_mut(), following_layer_derivatives.data.iter())  {
                     let max = &column.max();
                     column.iter_mut().for_each(|x| {
                         if x != max {
                             *x = 0.0;
+                        } else {
+                            *x = *deriv;
                         }
                     });
                 }
