@@ -48,7 +48,7 @@ pub fn im2col(m: &Ten, conv: &dyn Convolvable) -> DMatrix<f32> {
     let (krows, kcols) = conv.filter_shape().flat_shape();
     let jump_size = nrows * ncols;
 
-    let mut columns = Vec::with_capacity(outshape.magnitude());
+    // Transforms input tensor into a list of matrices with correct shape
     let reshaped_mats = Vec::from_iter((0..m.shape.magnitude()).step_by(jump_size).map(|x| {
         m.data
             .view((x, 0), (x + jump_size, 1))
@@ -60,18 +60,19 @@ pub fn im2col(m: &Ten, conv: &dyn Convolvable) -> DMatrix<f32> {
             )
     }));
 
-    for j in (0..=((ncols + conv.zero_padding()) - kcols)).step_by(conv.stride()) {
-        for i in (0..=((nrows + conv.zero_padding()) - krows)).step_by(conv.stride()) {
-            columns.extend(
-                (0..conv.out_depth())
-                    .map(|x| &reshaped_mats[x])
-                    .map(|m| m.view((i, j), (krows, kcols)).into_iter().copied())
-                    .flatten(),
-            );
+    let mut columns = Vec::with_capacity(outshape.magnitude());
+    for mat in reshaped_mats {
+        for i in (0..=((ncols + conv.zero_padding()) - kcols)).step_by(conv.stride()) {
+            for j in (0..=((nrows + conv.zero_padding()) - krows)).step_by(conv.stride()) {
+                columns.extend(
+                    mat.view((j, i), (krows, kcols))
+                );
+            }
         }
     }
+
     DMatrix::from_vec(
-        krows * kcols * conv.out_depth(),
+        krows * kcols,
         outshape.nrows * outshape.ncols,
         columns,
     )
@@ -86,8 +87,8 @@ pub fn out_shape(in_shape: Shape, conv: &dyn Convolvable) -> Shape {
             && conv.filter_shape().ncols <= in_shape.ncols + conv.zero_padding()
     );
     let new_nrows =
-        ((in_shape.nrows + conv.zero_padding()) - conv.filter_shape().nrows) / conv.stride();
+        ((in_shape.nrows + conv.zero_padding()) - conv.filter_shape().nrows) / conv.stride() + 1;
     let new_ncols =
-        ((in_shape.ncols + conv.zero_padding()) - conv.filter_shape().ncols) / conv.stride();
+        ((in_shape.ncols + conv.zero_padding()) - conv.filter_shape().ncols) / conv.stride() + 1;
     (new_nrows, new_ncols, conv.out_depth()).into()
 }
