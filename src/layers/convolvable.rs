@@ -51,7 +51,7 @@ pub fn im2col(m: &Ten, conv: &dyn Convolvable) -> DMatrix<f32> {
     // Transforms input tensor into a list of matrices with correct shape
     let reshaped_mats = Vec::from_iter((0..m.shape.magnitude()).step_by(jump_size).map(|x| {
         m.data
-            .view((x, 0), (x + jump_size, 1))
+            .view((x, 0), (jump_size, 1))
             .reshape_generic(Dyn(nrows), Dyn(ncols))
             .resize(
                 nrows + conv.zero_padding(),
@@ -70,9 +70,8 @@ pub fn im2col(m: &Ten, conv: &dyn Convolvable) -> DMatrix<f32> {
             }
         }
     }
-
     DMatrix::from_vec(
-        krows * kcols,
+        krows * kcols * m.shape.channels,
         outshape.nrows * outshape.ncols,
         columns,
     )

@@ -65,9 +65,7 @@ impl Backward for Convolution {
             following_layer_derivatives.data.into_iter().copied(),
         );
         let prev_columnised = im2col(previous_layer_output, self).transpose();
-        dbg!(prev_columnised.shape());
         let filter_derivatives = &flattened_derivatives * prev_columnised;
-        dbg!(filter_derivatives.shape());
 
         // Filter derivatives must be of shape (num of kernels) x (size of kernel)
         assert_eq!(
