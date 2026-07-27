@@ -1,6 +1,6 @@
 use enum_dispatch::enum_dispatch;
 
-use crate::layers::Activation;
+use crate::layers::{Activation, Flatten};
 use crate::layers::{Convolution, ConvolutionDelta};
 use crate::layers::{FullyConnected, FullyConnectedDelta};
 use crate::layers::Pool;
@@ -38,4 +38,5 @@ pub enum Layer {
     CONV(Convolution),
     POOL(Pool),
     ACTIVATION(Activation),
+    FLATTEN(Flatten)
 }
