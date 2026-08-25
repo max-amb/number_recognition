@@ -7,7 +7,7 @@ use crate::tensor::{Shape, Ten};
 
 #[derive(Debug)]
 pub struct FullyConnected {
-    output_shape: Shape,
+    output_size: usize,
     // Need to be options as we do not know shape at creation
     weights: Option<Ten>,
     biases: Option<Ten>,
@@ -15,9 +15,9 @@ pub struct FullyConnected {
 }
 
 impl FullyConnected {
-    pub fn new(output_shape: Shape, initialisation_options: InitialisationOptions) -> Self {
+    pub fn new(output_size: usize, initialisation_options: InitialisationOptions) -> Self {
         Self {
-            output_shape,
+            output_size,
             weights: None,
             biases: None,
             initialisation_options,
@@ -27,11 +27,10 @@ impl FullyConnected {
 
 impl Forward for FullyConnected {
     fn run(&self, prev_layer: &Ten) -> Ten {
-        let data: Ten = self.weights.as_ref().unwrap() % prev_layer + self.biases.as_ref().unwrap();
-        assert_eq!(data.shape.magnitude(), self.output_shape.magnitude());
+        let data: Ten = self.weights.as_ref().unwrap() * prev_layer + self.biases.as_ref().unwrap();
         Ten {
             data: data.data,
-            shape: self.output_shape,
+            shape: (self.output_size, 1, 1).into()
         }
     }
 }
@@ -39,12 +38,12 @@ impl Forward for FullyConnected {
 impl Initialisable for FullyConnected {
     fn initialise(&mut self, previous_shape: Shape) -> Shape {
         self.weights = Some(self.initialisation_options.create_matrix(
-            (self.output_shape.magnitude(), previous_shape.magnitude(), 1).into(),
+            (self.output_size, previous_shape.magnitude(), 1).into(),
             previous_shape.magnitude(),
         ));
 
-        self.biases = Some(DVector::from_element(self.output_shape.magnitude(), 0.0).into());
-        self.output_shape
+        self.biases = Some(DVector::from_element(self.output_size, 0.0).into());
+        (self.output_size, 1, 1).into()
     }
 }
 
