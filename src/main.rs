@@ -5,16 +5,18 @@ pub mod cost;
 pub mod initialisation;
 pub mod layers;
 pub mod neural_network;
-pub mod optimisation_algos;
 pub mod tensor;
 pub mod training_data;
 
 use cost::CostFunction;
 use initialisation::InitialisationOptions;
+use nalgebra::DVector;
 use neural_network::NN;
-use optimisation_algos::OptimisationAlgorithms;
 use std::sync::mpsc;
 use training_data::TrainingData;
+
+use crate::{layers::{Convolution, FullyConnected, Pool, Flatten}, tensor::{Shape, Ten}};
+use crate::layers::Layer;
 
 fn main() {
     let data_for_training = TrainingData::new(
@@ -22,7 +24,25 @@ fn main() {
         "/home/max/Downloads/train-images.idx3-ubyte",
         60000,
     );
+    
+    let layers: Vec<Layer> = vec![
+        layers::primitives::Layer::CONV(Convolution::new(8, (8, 8), 1, 0, InitialisationOptions::He)),
+        layers::primitives::Layer::ACTIVATION(layers::Activation::Relu),
+        layers::primitives::Layer::CONV(Convolution::new(8, (2, 2), 1, 0, InitialisationOptions::He)),
+        layers::primitives::Layer::ACTIVATION(layers::Activation::Relu),
+        layers::primitives::Layer::CONV(Convolution::new(8, (2, 2), 1, 0, InitialisationOptions::He)),
+        layers::primitives::Layer::ACTIVATION(layers::Activation::Relu),
+        layers::primitives::Layer::FLATTEN(layers::Flatten::new()),
+        layers::primitives::Layer::FC(FullyConnected::new(512, InitialisationOptions::He)),
+        layers::primitives::Layer::ACTIVATION(layers::Activation::Relu),
+        layers::primitives::Layer::FC(FullyConnected::new(256, InitialisationOptions::He)),
+        layers::primitives::Layer::ACTIVATION(layers::Activation::Relu),
+        layers::primitives::Layer::FC(FullyConnected::new(10, InitialisationOptions::He)),
+        layers::primitives::Layer::ACTIVATION(layers::Activation::Relu),
+    ];
 
+    let mut network: NN = NN::new(layers, (28, 28).into(), CostFunction::CategoricalCrossEntropy);
+    NN::train(&mut network, 512, data_for_training, 0.5, 0.1);
     // let mut network: NN = NN::generate_model_from_file("/home/max/Documents/model.txt").unwrap();
     // let mut network: NN = NN::new(&[784, 512, 256, 10], InitialisationOptions::He, None);
 
