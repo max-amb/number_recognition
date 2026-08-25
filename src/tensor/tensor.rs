@@ -25,11 +25,10 @@ impl Ten {
         let mut result: Vec<f32> = Vec::with_capacity(output_shape.magnitude());
         // This is viable because reshape_generic is zero cost, https://docs.rs/nalgebra/latest/nalgebra/base/struct.Matrix.html#method.reshape_generic.
         // And so is collection.
-        dbg!(self.shape);
         for channel in (0..self.shape.channels).map(|x| x * matrix_magnitude) {
             let mat_as_vec = self.data.view((channel, 0), (matrix_magnitude, 1));
             let mat_transposed = mat_as_vec
-                .reshape_generic(Dyn(output_shape.nrows), Dyn(output_shape.ncols))
+                .reshape_generic(Dyn(self.shape.nrows), Dyn(self.shape.ncols))
                 .transpose();
             result.extend(mat_transposed.into_iter().copied());
         }
@@ -43,6 +42,15 @@ impl Ten {
 impl From<DMatrix<f32>> for Ten {
     fn from(mat: DMatrix<f32>) -> Self {
         Self {
+            data: DVector::from_vec(mat.into_iter().copied().collect()),
+            shape: mat.shape().into(),
+        }
+    }
+}
+
+impl From<&DVector<f32>> for Ten {
+    fn from(mat: &DVector<f32>) -> Self {
+        Ten {
             data: DVector::from_vec(mat.into_iter().copied().collect()),
             shape: mat.shape().into(),
         }
@@ -75,6 +83,17 @@ impl From<DVector<f32>> for Ten {
     fn from(v: DVector<f32>) -> Self {
         let shape: Shape = v.shape().into();
         Self { data: v, shape }
+    }
+}
+
+impl std::ops::Mul<f32> for &Ten {
+    type Output = Ten;
+    fn mul(self, rhs: f32) -> Self::Output {
+        let new_data = &self.data * rhs;
+        Self::Output {
+            data: new_data,
+            shape: self.shape,
+        }
     }
 }
 
@@ -144,6 +163,13 @@ impl std::ops::Sub<&Ten> for Ten {
     }
 }
 
+impl std::ops::Mul<f32> for Ten {
+    type Output = Ten;
+    fn mul(self, rhs: f32) -> Self::Output {
+        &self * rhs
+    }
+}
+
 impl std::ops::Mul<Ten> for &Ten {
     type Output = Ten;
 
@@ -189,42 +215,6 @@ impl std::ops::Mul for &Ten {
             shape: new_shape,
         }
     }
-}
-
-fn mul_with_custom_shape(lhs: &Ten, rhs: &Ten, lhs_shape: Shape, rhs_shape: Shape) -> Ten {
-    assert_eq!(lhs_shape.channels, rhs_shape.channels);
-    assert_eq!(lhs_shape.ncols, rhs_shape.nrows);
-    let new_shape: Shape = (lhs_shape.nrows, rhs_shape.ncols, lhs_shape.channels).into();
-    let lhs_size = lhs_shape.nrows * lhs_shape.ncols;
-    let rhs_size = rhs_shape.nrows * rhs_shape.ncols;
-
-    let mut res: Vec<f32> = Vec::with_capacity(new_shape.magnitude());
-    for i in 0..lhs_shape.channels {
-        let lhs_view = lhs
-            .data
-            .view((i * (lhs_size), 0), (lhs_size, 1))
-            .reshape_generic(Dyn(lhs_shape.nrows), Dyn(lhs_shape.ncols));
-        let rhs_view = rhs
-            .data
-            .view((i * rhs_size, 0), (rhs_size, 1))
-            .reshape_generic(Dyn(rhs_shape.nrows), Dyn(rhs_shape.ncols));
-        res.extend((lhs_view * rhs_view).into_iter().copied());
-    }
-
-    Ten {
-        data: DVector::from_vec(res),
-        shape: new_shape,
-    }
-}
-
-impl std::ops::Rem for &Ten {
-    type Output = Ten;
-
-    fn rem(self, rhs: &Ten) -> Self::Output {
-        // Mul with flatten
-        mul_with_custom_shape(self, rhs, self.shape, (rhs.shape.magnitude(), 1, 1).into())
-    }
-    
 }
 
 impl std::ops::Mul for Ten {
