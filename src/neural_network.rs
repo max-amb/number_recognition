@@ -1,15 +1,7 @@
-#[allow(unused_imports)]
-use nalgebra::{DMatrix, DVector};
-use rand::Rng;
-use rand_distr::{Distribution, Normal};
-use std::fs::OpenOptions;
-use std::io::{BufRead, BufReader, Write};
-use std::sync::{Arc, mpsc};
-use std::thread;
+use std::cmp::min;
 
 use crate::cost::CostFunction;
-use crate::layers::{Forward, Initialisable, Layer};
-use crate::optimisation_algos::{Optimisation, OptimisationAlgorithms};
+use crate::layers::{Activation, Backward, Delta, Forward, Initialisable, Layer};
 use crate::tensor::{Shape, Ten};
 use crate::training_data::TrainingData;
 
@@ -31,202 +23,68 @@ impl NN {
         }
     }
 
-    pub fn forward_pass(network: &NN, input: Ten) -> Vec<Ten> {
-        let mut new_layers: Vec<Ten> = Vec::new();
-        let mut curr_inp = input.clone();
+    pub fn forward_pass(network: &NN, input: &Ten) -> Vec<Ten> {
+        let mut new_layers: Vec<Ten> = vec![input.clone()];
+        let mut curr_inp = input;
         for layer in &network.layers {
             let new_inp = layer.run(curr_inp);
-            new_layers.push(new_inp.clone());
-            curr_inp = new_inp;
+            new_layers.push(new_inp);
+            curr_inp = &new_layers[new_layers.len()-1];
         }
+        let pos = new_layers.len()-1;
+        new_layers[pos] = Activation::Softmax.run(&new_layers[pos]);
         new_layers
     }
 
-    /*
-    pub fn backprop(
-        network: &NN,
-        expected_result: &DVector<f32>,
-        new_layers: &[DVector<f32>],
-        cost_function: &CostFunction,
-    ) -> (Vec<DVector<f32>>, Vec<DMatrix<f32>>) {
-        let mut delta_weights_list: Vec<DMatrix<f32>> = Vec::new();
-        let mut delta_biases_list: Vec<DVector<f32>> = Vec::new();
+    pub fn backprop(network: &NN, resultant_layers: Vec<Ten>, expected_result: &Ten) -> Option<Vec<Delta>> {
+        let mut deltas: Vec<Delta> = Vec::new();
+        let mut r = resultant_layers.into_iter();
+        let softmax_result = r.next_back()?;
+        let layer_iter = std::iter::zip(&network.layers, r).rev();
+        let mut current_derivative = &softmax_result-expected_result;
+        for (layer, layer_data) in layer_iter {
+            let results = layer.backprop(current_derivative, &layer_data);
+            current_derivative = results.0;
+            deltas.push(results.1);
+        }
+        Some(deltas)
+    }
 
-        for layer in (0..network.weights.len()).rev() {
-            let non_activation_applied_layer =
-                &network.weights[layer] * &new_layers[layer] + &network.biases[layer];
-
-            if layer == network.weights.len() - 1 {
-                delta_biases_list.push(match cost_function {
-                    CostFunction::Quadratic => DVector::from_iterator(
-                        network.layers[layer + 1].nrows(),
-                        (2.0 * (&new_layers[layer + 1] - expected_result))
-                            .iter()
-                            .enumerate()
-                            .map(|(i, x)| {
-                                x * new_layers[layer + 1][i] * (1.0 - &new_layers[layer + 1][i])
-                            }),
-                    ),
-                    CostFunction::CategoricalCrossEntropy => {
-                        &new_layers[layer + 1] - expected_result
-                    }
-                });
+    fn training_step<I>(network: &NN, run_iterator: I, training_data: &TrainingData) -> impl Iterator<Item = Delta> + use<I>
+    where 
+        I: IntoIterator<Item = usize>
+    {
+        let mut deltas: Vec<Delta> = Vec::new();
+        let mut count = 0;
+        for run_num in run_iterator {
+            let tdm = &training_data.data[run_num];
+            let tdl = &training_data.labels[run_num];
+            let result = Self::forward_pass(network, &tdm);
+            if NN::network_classification(&result[result.len()-1]) == NN::network_classification(tdl) { count += 1; }
+            let ds = Self::backprop(network, result, tdl).unwrap();
+            if deltas.is_empty() {
+                deltas = ds
             } else {
-                delta_biases_list.push(DVector::from_iterator(
-                    network.layers[layer + 1].nrows(),
-                    (network.weights[layer + 1].transpose() * delta_biases_list.last().unwrap())
-                        .iter()
-                        .enumerate()
-                        .map(|(i, x)| {
-                            x * leaky_relu_derivative(
-                                non_activation_applied_layer[i],
-                                network.alpha,
-                            )
-                        }),
-                ));
+                deltas = std::iter::zip(deltas, ds).map(|(d1, d2)| d1 + d2).collect();
             }
-            delta_weights_list
-                .push(delta_biases_list.last().unwrap() * (new_layers[layer].transpose()));
         }
-
-        (
-            delta_biases_list.into_iter().rev().collect(),
-            delta_weights_list.into_iter().rev().collect(),
-        )
+        dbg!(count);
+        deltas.into_iter().rev()
     }
 
-    pub fn network_classification(layer: &DVector<f32>) -> usize {
-        let mut network_classification: (usize, f32) = (usize::MIN, f32::MIN);
-        for i in layer.iter().enumerate() {
-            if network_classification.1 < *i.1 {
-                network_classification.1 = *i.1;
-                network_classification.0 = i.0
-            };
-        }
-        network_classification.0
-    }
-
-    pub fn output_model_to_file(network: &NN, path: &str) -> std::io::Result<()> {
-        let mut f = OpenOptions::new()
-            .write(true)
-            .read(false)
-            .create(true)
-            .truncate(true)
-            .open(path)?;
-
-        let mut output: String = String::from("[layers]\n");
-        output.push_str(
-            &network
-                .layers
-                .iter()
-                .fold(String::from("["), |s, x| format!("{s}{}, ", x.len())),
-        );
-        output.replace_range(output.len() - 2..output.len(), "]\n");
-
-        output.push_str("\n[weights]");
-        for weight in network.weights.iter().enumerate() {
-            output.push_str("\n[");
-            for individual_number in weight.1 {
-                output.push_str(&format!("{individual_number}, "));
+    pub fn train(network: &mut NN, cycle_size: usize, training_data: TrainingData, precision: f32, learning_rate: f32) {
+        let recip_cycle_size = 1.0/(cycle_size as f32);
+        loop {
+            for cycle in (0..training_data.data.len()).step_by(cycle_size) {
+                dbg!(cycle);
+                let deltas = Self::training_step(network, cycle..min(cycle+cycle_size, training_data.data.len()), &training_data);
+                for (d, l) in std::iter::zip(deltas, &mut network.layers) {
+                    l.apply(d*learning_rate*recip_cycle_size) 
+                };
+                break
             }
-            output.replace_range(output.len() - 2..output.len(), "]");
+            // dbg!(Self::run_on_testing_data(network));
         }
-
-        output.push_str("\n\n[biases]");
-        for biase in network.biases.iter().enumerate() {
-            output.push_str("\n[");
-            for individual_number in biase.1 {
-                output.push_str(&format!("{individual_number}, "));
-            }
-            output.replace_range(output.len() - 2..output.len(), "]");
-        }
-
-        output.push_str("\n\n[alpha]\n");
-        output.push_str(&format!("{}\n", network.alpha));
-
-        write!(f, "{output}")
-    }
-
-    pub fn generate_model_from_file(path: &str) -> Result<NN, std::io::Error> {
-        let f = OpenOptions::new().read(true).open(path)?;
-        let mut reader = BufReader::new(f);
-        let mut line = String::new();
-
-        // Layers
-        reader.read_line(&mut line)?;
-        assert_eq!(&line, "[layers]\n");
-        line.clear();
-        reader.read_line(&mut line)?;
-        line = line.strip_prefix("[").unwrap().to_string();
-        line = line.strip_suffix("]\n").unwrap().to_string();
-        let layer_sizes: Vec<usize> = line
-            .split(", ")
-            .map(|x| x.parse::<usize>().unwrap())
-            .collect();
-        line.clear();
-
-        let layers: Vec<DVector<f32>> = (0..layer_sizes.len())
-            .map(|x| DVector::from_element(layer_sizes[x], 0.0))
-            .collect();
-
-        // Weights
-        let mut weights: Vec<DMatrix<f32>> = Vec::new();
-        reader.read_line(&mut line)?;
-        assert_eq!(&line, "\n");
-        line.clear();
-        reader.read_line(&mut line)?;
-        assert_eq!(&line, "[weights]\n");
-        line.clear();
-
-        for i in 0..layer_sizes.len() - 1 {
-            reader.read_line(&mut line)?;
-            line = line.strip_prefix("[").unwrap().to_string();
-            line = line.strip_suffix("]\n").unwrap().to_string();
-            weights.push(DMatrix::from_iterator(
-                layer_sizes[i + 1],
-                layer_sizes[i],
-                line.split(", ").map(|x| x.parse::<f32>().unwrap()),
-            ));
-            line.clear();
-        }
-
-        // Biases
-        let mut biases: Vec<DVector<f32>> = Vec::new();
-        reader.read_line(&mut line)?;
-        assert_eq!(&line, "\n");
-        line.clear();
-        reader.read_line(&mut line)?;
-        assert_eq!(&line, "[biases]\n");
-        line.clear();
-
-        for i in 0..layer_sizes.len() - 1 {
-            reader.read_line(&mut line)?;
-            line = line.strip_prefix("[").unwrap().to_string();
-            line = line.strip_suffix("]\n").unwrap().to_string();
-            biases.push(DVector::from_iterator(
-                layer_sizes[i + 1],
-                line.split(", ").map(|x| x.parse::<f32>().unwrap()),
-            ));
-            line.clear();
-        }
-
-        // Alpha
-        reader.read_line(&mut line)?;
-        assert_eq!(&line, "\n");
-        line.clear();
-        reader.read_line(&mut line)?;
-        assert_eq!(&line, "[alpha]\n");
-        line.clear();
-        reader.read_line(&mut line)?;
-        dbg!(&line);
-        let alpha: f32 = line.strip_suffix("\n").unwrap().parse().unwrap();
-
-        Ok(NN {
-            layers,
-            weights,
-            biases,
-            alpha,
-        })
     }
 
     /*
@@ -366,6 +224,7 @@ impl NN {
         network
     }*/
 
+    /*
     pub fn non_parallel_training(
         mut network: NN,
         cycle_size: usize,
@@ -376,13 +235,6 @@ impl NN {
         learning_rate: f32,
     ) -> NN {
         assert!(cycle_size <= training_data.data.len());
-        let mut optimisation = Optimisation::new(
-            &network,
-            optimisation_algorithm,
-            learning_rate,
-            cycle_size,
-            Some(0.99),
-        );
         /*
         let mut avg_score: f32 = 0.0;
         let mut epochs: u32 = 0; */
@@ -469,4 +321,33 @@ impl NN {
         correct
     }
     */
+
+    pub fn network_classification(layer: &Ten) -> usize {
+        let mut network_classification: (usize, f32) = (usize::MIN, f32::MIN);
+        for i in layer.data.iter().enumerate() {
+            if network_classification.1 < *i.1 {
+                network_classification.1 = *i.1;
+                network_classification.0 = i.0
+            };
+        }
+        network_classification.0
+    }
+
+    pub fn run_on_testing_data(network: &NN) -> usize {
+        let testing_data = TrainingData::new(
+            "/home/max/Downloads/t10k-labels.idx1-ubyte",
+            "/home/max/Downloads/t10k-images.idx3-ubyte",
+            10000,
+        );
+        let mut correct: usize = 0;
+        for j in 0..testing_data.data.len() {
+            let new_layers = NN::forward_pass(network, &testing_data.data[j]);
+            if NN::network_classification(&new_layers[new_layers.len() - 1])
+                == NN::network_classification(&testing_data.labels[j])
+            {
+                correct += 1
+            };
+        }
+        correct
+    }
 }
