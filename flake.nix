@@ -23,7 +23,6 @@
         (rust-bin.stable.latest.default.override {
           extensions = [ "rust-src" "rust-analyzer" ];
         })
-        gdb
         python313
         python313Packages.matplotlib
         python313Packages.torch

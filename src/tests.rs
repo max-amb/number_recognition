@@ -62,7 +62,6 @@ pub mod test {
                 ],
             ),
         ];
-        dbg!(&delta_weights);
         for i in delta_weights.iter().enumerate() {
             for j in i.1.row_iter().enumerate() {
                 for k in j.1.iter().enumerate() {
