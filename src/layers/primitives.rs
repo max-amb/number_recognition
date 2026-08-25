@@ -28,7 +28,84 @@ pub enum Delta {
     FCD(FullyConnectedDelta),
     CONVD(ConvolutionDelta),
     POOLD(()),
-    ACTIVATIOND(())
+    ACTIVATIOND(()),
+    FLATTEND(())
+}
+
+impl std::ops::Mul<f32> for Delta {
+    type Output = Delta;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        match self {
+            Self::FCD(fc) => {
+                return Self::FCD(fc * rhs);
+            } 
+
+            Self::CONVD(conv) => {
+                return Self::CONVD(conv * rhs);
+            }
+
+            Self::POOLD(_) => {
+                return Self::POOLD(());
+            }
+
+            Self::ACTIVATIOND(_) => {
+                return Self::ACTIVATIOND(());
+            }
+
+            Self::FLATTEND(_) => {
+                return Self::FLATTEND(());
+            }
+        }
+    }
+}
+
+impl std::ops::Add for Delta {
+    type Output = Delta; 
+    fn add(self, rhs: Self) -> Self::Output {
+        // TODO: Complete
+        match self {
+            Self::FCD(fc) => {
+                if let Self::FCD(rhs_fc) = rhs {
+                    return Delta::FCD(fc.add(rhs_fc))
+                } else {
+                    panic!();
+                }
+            } 
+
+            Self::CONVD(conv) => {
+                if let Self::CONVD(rhs_conv) = rhs {
+                    return Delta::CONVD(conv.add(rhs_conv));
+                } else {
+                    panic!();
+                }
+            }
+
+            Self::POOLD(_) => {
+                if let Self::POOLD(_) = rhs {
+                    return Delta::POOLD(());
+                } else {
+                    panic!();
+                }
+            }
+
+            Self::ACTIVATIOND(_) => {
+                if let Self::ACTIVATIOND(_) = rhs {
+                    return Delta::ACTIVATIOND(());
+                } else {
+                    panic!();
+                }
+            }
+
+            Self::FLATTEND(_) => {
+                if let Self::FLATTEND(_) = rhs {
+                    return Delta::FLATTEND(());
+                } else {
+                    panic!();
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug)]

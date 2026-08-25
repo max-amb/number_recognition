@@ -29,15 +29,25 @@ impl Initialisable for Activation {
 }
 
 impl Backward for Activation {
+    fn final_layer_backprop(&self, _: Ten, _: &Ten) -> (Ten,Delta) {
+        panic!();
+    }
+
     fn apply(&mut self, _: Delta) { } 
 
-    fn backprop(&self, following_layer_derivatives: Ten, _: &Ten) -> (Ten,Delta) {
-        (following_layer_derivatives.fmap(|val| match self {
+    fn backprop(&self, following_layer_derivatives: Ten, previous_layer_output: &Ten) -> (Ten,Delta) {
+        let activation_deriv = previous_layer_output.fmap(|val| match self {
             Activation::Sigmoid => val.map(sigmoid_derivative),
             Activation::Relu => val.map(relu_derivative),
             Activation::Softmax => softmax_derivative(val),
             Activation::LeakyRelu { alpha } => leaky_relu_derivative(val, *alpha),
-        }), Delta::ACTIVATIOND(()))
+        });
+        let x = following_layer_derivatives.data.component_mul(&activation_deriv.data);
+        (Ten {
+            data: x,
+            shape: previous_layer_output.shape
+        },
+        Delta::ACTIVATIOND(()))
     }
 }
 

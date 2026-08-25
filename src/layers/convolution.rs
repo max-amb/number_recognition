@@ -52,7 +52,19 @@ impl std::ops::Add for ConvolutionDelta {
     }
 }
 
+impl std::ops::Mul<f32> for ConvolutionDelta {
+    type Output = ConvolutionDelta; 
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        ConvolutionDelta(self.0.into_iter().map(|x| (x.0 * rhs, x.1*rhs) ).collect())
+    }
+}
+
 impl Backward for Convolution {
+    fn final_layer_backprop(&self,cost_func_derivative: Ten, previous_layer_output: &Ten) -> (Ten,Delta) {
+        panic!();
+    }
+
     fn backprop(
         &self,
         following_layer_derivatives: Ten,

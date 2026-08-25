@@ -53,6 +53,18 @@ pub struct FullyConnectedDelta {
     delta_biases: Ten,
 }
 
+impl std::ops::Mul<f32> for FullyConnectedDelta {
+    type Output = FullyConnectedDelta;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Self {
+            delta_weights: self.delta_weights * rhs,
+            delta_biases: self.delta_biases * rhs,
+        }
+    }
+}
+
+
 impl std::ops::Add for FullyConnectedDelta {
     type Output = FullyConnectedDelta;
 
@@ -64,30 +76,37 @@ impl std::ops::Add for FullyConnectedDelta {
     }
 }
 
+/// When we are in fully connected layers, (following_layer_derivatives) is \delta from above layer
 impl Backward for FullyConnected {
     fn backprop(
         &self,
-        following_layer_derivatives: Ten,
+        delta: Ten,
         previous_layer_output: &Ten,
     ) -> (Ten, Delta) {
-        let mut delta_biases = (self.weights.as_ref().unwrap().transpose()) * (&following_layer_derivatives);
-        delta_biases.shape = previous_layer_output.shape;
-        let delta_weights = &delta_biases * (previous_layer_output.transpose());
+        let delta_weights = &delta * (previous_layer_output.transpose());
         (
-            delta_biases.clone(),
+            self.weights.as_ref().unwrap().transpose() * &delta,
             Delta::FCD(FullyConnectedDelta {
                 delta_weights,
-                delta_biases
+                delta_biases: delta,
             }),
         )
     }
 
     fn apply(&mut self, delta: Delta) {
         if let Delta::FCD(delta) = delta {
-            self.biases = Some(self.biases.as_ref().unwrap() + delta.delta_biases);
-            self.weights = Some(self.weights.as_ref().unwrap() + delta.delta_weights);
+            self.biases = Some(self.biases.as_ref().unwrap() - delta.delta_biases);
+            self.weights = Some(self.weights.as_ref().unwrap() - delta.delta_weights);
         } else {
             panic!()
         }
+    }
+
+    fn final_layer_backprop(&self, delta: Ten, previous_layer_output: &Ten) -> (Ten,Delta) {
+        let delta_weights = &delta * (previous_layer_output.transpose());
+        (
+            self.weights.as_ref().unwrap().transpose() * &delta,
+            Delta::FCD(FullyConnectedDelta { delta_weights, delta_biases: delta })
+        )
     }
 }
