@@ -61,10 +61,6 @@ impl std::ops::Mul<f32> for ConvolutionDelta {
 }
 
 impl Backward for Convolution {
-    fn final_layer_backprop(&self,cost_func_derivative: Ten, previous_layer_output: &Ten) -> (Ten,Delta) {
-        panic!();
-    }
-
     fn backprop(
         &self,
         following_layer_derivatives: Ten,

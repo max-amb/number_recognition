@@ -94,10 +94,6 @@ impl Forward for Pool {
 }
 
 impl Backward for Pool {
-    fn final_layer_backprop(&self, _: Ten, _:&Ten) -> (Ten,Delta) {
-        panic!(); 
-    }
-
     fn apply(&mut self, _: Delta) { }
 
     fn backprop(&self, following_layer_derivatives: Ten, previous_layer_output: &Ten) -> (Ten, Delta) {

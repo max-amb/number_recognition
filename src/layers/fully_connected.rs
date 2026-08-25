@@ -101,12 +101,4 @@ impl Backward for FullyConnected {
             panic!()
         }
     }
-
-    fn final_layer_backprop(&self, delta: Ten, previous_layer_output: &Ten) -> (Ten,Delta) {
-        let delta_weights = &delta * (previous_layer_output.transpose());
-        (
-            self.weights.as_ref().unwrap().transpose() * &delta,
-            Delta::FCD(FullyConnectedDelta { delta_weights, delta_biases: delta })
-        )
-    }
 }

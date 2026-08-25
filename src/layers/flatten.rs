@@ -25,10 +25,6 @@ impl Backward for Flatten {
     fn backprop(&self, following_layer_derivatives: Ten, _: &Ten) -> (Ten,Delta) {
         (Ten { data: following_layer_derivatives.data, shape: self.input_shape }, Delta::FLATTEND(()))
     }
-
-    fn final_layer_backprop(&self,cost_func_derivative: Ten,previous_layer_output: &Ten) -> (Ten,Delta) {
-        panic!();
-    }
 }
 
 impl Initialisable for Flatten {

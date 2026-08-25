@@ -21,7 +21,6 @@ pub trait Forward {
 pub trait Backward {
     fn backprop(&self, following_layer_derivatives: Ten, previous_layer_output: &Ten) -> (Ten, Delta);
     fn apply(&mut self, delta: Delta);
-    fn final_layer_backprop(&self, cost_func_derivative: Ten, previous_layer_output: &Ten) -> (Ten, Delta);
 }
 
 #[derive(Debug)]
