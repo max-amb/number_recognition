@@ -137,8 +137,8 @@ impl Backward for Convolution {
                 .iter_mut()
                 .enumerate()
                 .for_each(|(i, Kernel { kernel, bias, .. })| {
-                    *kernel = Some(kernel.as_ref().unwrap() + &delta.0[i].0);
-                    *bias += delta.0[i].1;
+                    *kernel = Some(kernel.as_ref().unwrap() - &delta.0[i].0);
+                    *bias -= delta.0[i].1;
                 });
         } else {
             panic!();
@@ -210,22 +210,24 @@ impl Forward for Convolution {
             self.shape.0 * self.shape.1 * previous_layers_channels,
             rows_of_kernels,
         );
-        let biases_mat: DMatrix<f32> = DMatrix::from_iterator(
+
+        let mut res = matrix_of_kernels * &prev_columnised; // (num_kernels x num_positions)
+
+        let biases: DVector<f32> = DVector::from_iterator(
             self.kernels.len(),
-            prev_columnised.ncols(),
-            (0..self.kernels.len())
-                .map(|x| self.kernels[x].bias)
-                .cycle()
-                .take(self.kernels.len() * prev_columnised.ncols()),
+            self.kernels.iter().map(|k| k.bias),
         );
-        let res = ((matrix_of_kernels * &prev_columnised) + biases_mat)
+
+        res.column_iter_mut().for_each(|mut col| col += &biases);
+
+        Ten {
+            data: 
+        res
             .transpose()
             .reshape_generic(
                 Dyn(self.kernels.len() * prev_columnised.ncols()),
                 Const::<1>,
-            );
-        Ten {
-            data: res,
+            ),
             shape: outshape,
         }
     }

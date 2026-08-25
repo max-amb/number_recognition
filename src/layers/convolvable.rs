@@ -1,3 +1,5 @@
+use std::process::exit;
+
 use crate::tensor::{Shape, Ten};
 use nalgebra::{DMatrix, DVector, Dyn};
 
@@ -47,6 +49,8 @@ pub fn im2col(m: &Ten, conv: &dyn Convolvable) -> DMatrix<f32> {
     let (nrows, ncols) = m.shape.flat_shape();
     let (krows, kcols) = conv.filter_shape().flat_shape();
     let jump_size = nrows * ncols;
+    let zp = conv.zero_padding();
+    let stride = conv.stride();
 
     // Transforms input tensor into a list of matrices with correct shape
     let reshaped_mats = Vec::from_iter((0..m.shape.magnitude()).step_by(jump_size).map(|x| {
@@ -54,16 +58,16 @@ pub fn im2col(m: &Ten, conv: &dyn Convolvable) -> DMatrix<f32> {
             .view((x, 0), (jump_size, 1))
             .reshape_generic(Dyn(nrows), Dyn(ncols))
             .resize(
-                nrows + conv.zero_padding(),
-                ncols + conv.zero_padding(),
+                nrows + zp,
+                ncols + zp,
                 0.0,
             )
     }));
 
-    let mut columns = Vec::with_capacity(outshape.magnitude());
+    let mut columns = Vec::with_capacity(krows*kcols*outshape.magnitude());
     for mat in reshaped_mats {
-        for i in (0..=((ncols + conv.zero_padding()) - kcols)).step_by(conv.stride()) {
-            for j in (0..=((nrows + conv.zero_padding()) - krows)).step_by(conv.stride()) {
+        for i in (0..=((ncols + zp) - kcols)).step_by(stride) {
+            for j in (0..=((nrows + zp) - krows)).step_by(stride) {
                 columns.extend(
                     mat.view((j, i), (krows, kcols))
                 );
