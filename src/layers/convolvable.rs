@@ -57,20 +57,16 @@ pub fn im2col(m: &Ten, conv: &dyn Convolvable) -> DMatrix<f32> {
         m.data
             .view((x, 0), (jump_size, 1))
             .reshape_generic(Dyn(nrows), Dyn(ncols))
-            .resize(
-                nrows + zp,
-                ncols + zp,
-                0.0,
-            )
+            .resize(nrows + zp, ncols + zp, 0.0)
     }));
 
-    let mut columns = Vec::with_capacity(krows*kcols*outshape.magnitude());
-    for mat in reshaped_mats {
-        for i in (0..=((ncols + zp) - kcols)).step_by(stride) {
-            for j in (0..=((nrows + zp) - krows)).step_by(stride) {
-                columns.extend(
-                    mat.view((j, i), (krows, kcols))
-                );
+    // We need krows*kcols numbers to calculate each position in the output.
+    let mut columns: Vec<f32> = Vec::new();
+
+    for i in (0..=((ncols + zp) - kcols)).step_by(stride) {
+        for j in (0..=((nrows + zp) - krows)).step_by(stride) {
+            for mat in reshaped_mats.iter() {
+                columns.extend(mat.view((j, i), (krows, kcols)));
             }
         }
     }
