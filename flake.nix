@@ -9,30 +9,37 @@
     };
   };
 
-  outputs = { nixpkgs, rust-overlay, ... }:
-  let
-    system = "x86_64-linux";
-    overlays = [ (import rust-overlay) ];
-    pkgs = import nixpkgs {
-      inherit system overlays;
-    };
-  in {
-    devShells."x86_64-linux".default = with pkgs; mkShell {
-      buildInputs = [
-        pkg-config
-        (rust-bin.stable.latest.default.override {
-          extensions = [ "rust-src" "rust-analyzer" ];
-        })
-        python313
-        python313Packages.matplotlib
-        python313Packages.torch
-        python313Packages.torchvision
-      ];
-      shellHook = ''
-        export SHELL=/run/current-system/sw/bin/bash
-      '';
-    };
+  outputs =
+    { nixpkgs, rust-overlay, ... }:
+    let
+      system = "x86_64-linux";
+      overlays = [ (import rust-overlay) ];
+      pkgs = import nixpkgs {
+        inherit system overlays;
+      };
+    in
+    {
+      devShells.${system}.default =
+        with pkgs;
+        mkShell {
+          buildInputs = [
+            pkg-config
+            (rust-bin.stable.latest.default.override {
+              extensions = [
+                "rust-src"
+                "rust-analyzer"
+              ];
+            })
+            python313
+            python313Packages.matplotlib
+            python313Packages.torch
+            python313Packages.torchvision
+          ];
+          shellHook = ''
+            export SHELL=/run/current-system/sw/bin/bash
+            export PATH=$PATH:~/.cargo/bin
+          '';
+        };
 
-  };
+    };
 }
-

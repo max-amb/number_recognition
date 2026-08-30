@@ -3,6 +3,12 @@ name = "number_recognition"
 version = "0.1.0"
 edition = "2024"
 
+[target.x86_64-unknown-linux-gnu]
+rustflags = ["-Clink-arg=-Wl,--no-rosegment"]
+
+[profile.release]
+debug = true
+
 [dependencies]
 ctrlc = "3.4.7"
 enum_dispatch = "0.3.13"
